@@ -25,8 +25,24 @@ export async function middleware(req: NextRequest) {
 
   try {
     // Only import and use Supabase if env vars are present
-    const { createMiddlewareClient } = await import('@supabase/auth-helpers-nextjs');
-    const supabase = createMiddlewareClient({ req, res });
+    const { createServerClient } = await import('@supabase/ssr');
+    const supabase = createServerClient(
+      supabaseUrl!,
+      supabaseAnonKey!,
+      {
+        cookies: {
+          get(name: string) {
+            return req.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            res.cookies.set(name, value, options);
+          },
+          remove(name: string, options: any) {
+            res.cookies.set(name, '', { ...options, maxAge: 0 });
+          },
+        },
+      }
+    );
 
     // Refresh session if expired
     const {
