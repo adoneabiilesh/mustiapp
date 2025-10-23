@@ -64,7 +64,9 @@ export default Sentry.wrap(function RootLayout() {
 
   return (
     <ThemeProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <AppInitializationProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AppInitializationProvider>
     </ThemeProvider>
   );
 });

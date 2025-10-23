@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { Typography, Colors, Spacing, BorderRadius, Shadows } from './typography';
+import { Typography } from './typography';
+import { Colors, Spacing, BorderRadius, Shadows } from './designSystem';
 
 interface ThemeContextType {
   fontsLoaded: boolean;

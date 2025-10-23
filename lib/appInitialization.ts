@@ -1,4 +1,5 @@
-import { Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Platform, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { AnalyticsManager } from './analytics';
