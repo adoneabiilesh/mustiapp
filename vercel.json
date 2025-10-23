@@ -1,18 +1,6 @@
 {
   "version": 2,
   "name": "mustiapp-admin-dashboard",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/admin/(.*)",
-      "dest": "/$1"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -36,9 +24,6 @@
       ]
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "functions": {
     "app/api/**/*.js": {
       "maxDuration": 30
