@@ -214,8 +214,8 @@ export default function OrdersPage() {
                             <p className="font-semibold">€{order.total.toFixed(2)}</p>
                           </td>
                           <td className="p-4">
-                            <Badge variant={order.payment_method === 'cash' ? 'secondary' : 'default'} className="capitalize">
-                              {order.payment_method === 'cash' ? 'Cash on Delivery' : 'Card Payment'}
+                            <Badge variant={(order as any).payment_method === 'cash' ? 'secondary' : 'default'} className="capitalize">
+                              {(order as any).payment_method === 'cash' ? 'Cash on Delivery' : 'Card Payment'}
                             </Badge>
                           </td>
                           <td className="p-4">
