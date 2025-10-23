@@ -28,7 +28,7 @@ export function exportOrdersToCSV(orders: Order[]): void {
     order.users?.email || '',
     order.status,
     order.total.toFixed(2),
-    order.payment_method === 'cash' ? 'Cash on Delivery' : 'Card Payment',
+    (order as any).payment_method === 'cash' ? 'Cash on Delivery' : 'Card Payment',
     new Date(order.created_at).toLocaleDateString(),
     order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
   ]);
