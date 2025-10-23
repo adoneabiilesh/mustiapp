@@ -118,7 +118,7 @@ export default function CustomersPage() {
 
                     <div className="flex items-center justify-between">
                       <Badge variant="outline">
-                        Member since {format(new Date(customer.created_at), 'MMM yyyy')}
+                        Member since {customer.created_at ? format(new Date(customer.created_at), 'MMM yyyy') : 'Unknown'}
                       </Badge>
                       <button
                         onClick={() => setSelectedCustomer(customer)}
