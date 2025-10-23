@@ -48,12 +48,8 @@ export default function ProductsPage() {
   useEffect(() => {
     const checkColumn = async () => {
       try {
-        const { error } = await getMenuItems();
-        if (error && error.message.includes('available_addons')) {
-          setColumnExists(false);
-        } else {
-          setColumnExists(true);
-        }
+        await getMenuItems();
+        setColumnExists(true);
       } catch (error) {
         setColumnExists(false);
       }
