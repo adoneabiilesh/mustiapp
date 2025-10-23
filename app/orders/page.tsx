@@ -319,8 +319,8 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Payment Method</p>
-                  <Badge variant={selectedOrder.payment_method === 'cash' ? 'secondary' : 'default'} className="capitalize">
-                    {selectedOrder.payment_method === 'cash' ? 'Cash on Delivery' : 'Card Payment'}
+                  <Badge variant={(selectedOrder as any).payment_method === 'cash' ? 'secondary' : 'default'} className="capitalize">
+                    {(selectedOrder as any).payment_method === 'cash' ? 'Cash on Delivery' : 'Card Payment'}
                   </Badge>
                 </div>
               </div>
