@@ -23,7 +23,8 @@ export default function LoginPage() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
-    if (!supabaseUrl || !supabaseAnonKey) {
+    // Only show config error in development
+    if (process.env.NODE_ENV === 'development' && (!supabaseUrl || !supabaseAnonKey)) {
       setConfigError(true);
     }
   }, []);

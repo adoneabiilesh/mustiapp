@@ -12,6 +12,11 @@ export async function middleware(req: NextRequest) {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('⚠️ Supabase environment variables not configured');
     
+    // In production, allow access to all pages (env vars should be set in Vercel)
+    if (process.env.NODE_ENV === 'production') {
+      return res;
+    }
+    
     // Allow login page
     if (req.nextUrl.pathname.startsWith('/login')) {
       return res;
