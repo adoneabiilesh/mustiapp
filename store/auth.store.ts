@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import {User} from "@/type";
-import {getCurrentUser} from "@/lib/appwrite";
+import {getCurrentUser, initializeUserProfile} from "@/lib/supabase";
 
 type AuthState = {
     isAuthenticated: boolean;
@@ -12,6 +12,7 @@ type AuthState = {
     setLoading: (loading: boolean) => void;
 
     fetchAuthenticatedUser: () => Promise<void>;
+    logout: () => void;
 }
 
 const useAuthStore = create<AuthState>((set) => ({
@@ -29,14 +30,28 @@ const useAuthStore = create<AuthState>((set) => ({
         try {
             const user = await getCurrentUser();
 
-            if(user) set({ isAuthenticated: true, user: user as User })
-            else set( { isAuthenticated: false, user: null } );
+            if(user) {
+                // Initialize user profile in database
+                await initializeUserProfile(user.$id, {
+                    name: user.name || 'User',
+                    email: user.email || '',
+                    avatar: user.avatar,
+                });
+                
+                set({ isAuthenticated: true, user: user as User });
+            } else {
+                set( { isAuthenticated: false, user: null } );
+            }
         } catch (e) {
             console.log('fetchAuthenticatedUser error', e);
             set({ isAuthenticated: false, user: null })
         } finally {
             set({ isLoading: false });
         }
+    },
+
+    logout: () => {
+        set({ isAuthenticated: false, user: null });
     }
 }))
 

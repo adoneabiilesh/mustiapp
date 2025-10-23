@@ -1,6 +1,14 @@
-import { Models } from "react-native-appwrite";
+import { ImageSourcePropType } from 'react-native';
 
-export interface MenuItem extends Models.Document {
+// Base document interface (replaces Appwrite Models.Document)
+interface BaseDocument {
+    id: string;
+    $id: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface MenuItem extends BaseDocument {
     name: string;
     price: number;
     image_url: string;
@@ -9,17 +17,20 @@ export interface MenuItem extends Models.Document {
     protein: number;
     rating: number;
     type: string;
+    categories?: string[];
 }
 
-export interface Category extends Models.Document {
+export interface Category extends BaseDocument {
     name: string;
     description: string;
 }
 
-export interface User extends Models.Document {
+export interface User extends BaseDocument {
     name: string;
     email: string;
     avatar: string;
+    phone?: string;
+    address?: string;
 }
 
 export interface CartCustomization {
@@ -36,6 +47,7 @@ export interface CartItemType {
     image_url: string;
     quantity: number;
     customizations?: CartCustomization[];
+    cartId?: string; // unique cart item id
 }
 
 export interface CartStore {
@@ -69,6 +81,7 @@ interface CustomButtonProps {
     leftIcon?: React.ReactNode;
     textStyle?: string;
     isLoading?: boolean;
+    disabled?: boolean;
 }
 
 interface CustomHeaderProps {

@@ -3,7 +3,8 @@ import {Link, router} from "expo-router";
 import CustomInput from "@/components/CustomInput";
 import CustomButton from "@/components/CustomButton";
 import {useState} from "react";
-import {createUser} from "@/lib/appwrite";
+import {createUser} from "@/lib/supabase";
+import useAuthStore from "@/store/auth.store";
 
 const SignUp = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,7 +18,11 @@ const SignUp = () => {
         setIsSubmitting(true)
 
         try {
-            await createUser({ email,  password,  name });
+            const user = await createUser({ email,  password,  name });
+            
+            // Update auth store with the returned user
+            useAuthStore.getState().setUser(user);
+            useAuthStore.getState().setIsAuthenticated(true);
 
             router.replace('/');
         } catch(error: any) {

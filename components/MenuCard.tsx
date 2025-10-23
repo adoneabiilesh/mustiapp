@@ -1,19 +1,34 @@
-import {Text, TouchableOpacity, Image, Platform} from 'react-native'
+import {Text, TouchableOpacity, Image, View} from 'react-native'
 import {MenuItem} from "@/type";
-import {appwriteConfig} from "@/lib/appwrite";
 import {useCartStore} from "@/store/cart.store";
+import {images} from "@/constants";
 
 const MenuCard = ({ item: { $id, image_url, name, price }}: { item: MenuItem}) => {
-    const imageUrl = `${image_url}?project=${appwriteConfig.projectId}`;
+    // Use image_url directly (it's already a public URL from Supabase or external source)
+    const imageUrl = image_url;
     const { addItem } = useCartStore();
 
     return (
-        <TouchableOpacity className="menu-card" style={Platform.OS === 'android' ? { elevation: 10, shadowColor: '#878787'}: {}}>
-            <Image source={{ uri: imageUrl }} className="size-32 absolute -top-10" resizeMode="contain" />
-            <Text className="text-center base-bold text-dark-100 mb-2" numberOfLines={1}>{name}</Text>
-            <Text className="body-regular text-gray-200 mb-4">From ${price}</Text>
-            <TouchableOpacity onPress={() => addItem({ id: $id, name, price, image_url: imageUrl, customizations: []})}>
-                <Text className="paragraph-bold text-primary">Add to Cart +</Text>
+        <TouchableOpacity className="food-card mb-4">
+            <View className="food-card-image">
+                <Image 
+                    source={{ uri: imageUrl || 'https://via.placeholder.com/300x200' }} 
+                    className="w-full h-full" 
+                    resizeMode="cover" 
+                />
+            </View>
+            <View className="food-card-overlay">
+                <Text className="card-title" numberOfLines={1}>{name}</Text>
+                <Text className="price-text">€{price.toFixed(2)}</Text>
+            </View>
+            <View className="food-card-heart">
+                <Image source={images.star} className="size-5" tintColor="white" />
+            </View>
+            <TouchableOpacity 
+                className="absolute bottom-3 right-3 bg-primary-500 rounded-full p-2"
+                onPress={() => addItem({ id: $id, name, price, image_url: imageUrl, customizations: []})}
+            >
+                <Image source={images.plus} className="size-4" tintColor="white" />
             </TouchableOpacity>
         </TouchableOpacity>
     )
