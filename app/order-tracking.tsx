@@ -5,90 +5,93 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Image,
+  StyleSheet,
   Alert,
+  ActivityIndicator,
+  Platform,
+  Linking,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { images } from '@/constants';
-import OrderTrackingMap from '../components/OrderTrackingMap';
-import { useAddressStore } from '../store/address.store';
-import { AddressCard } from '../components/AddressCard';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../lib/designSystem';
-import { Icons } from '../lib/icons';
-import cn from 'clsx';
+import { getOrderDetails, subscribeToOrderStatus } from '@/lib/database';
+import { Colors, Spacing, BorderRadius, Shadows } from '@/lib/designSystem';
+import { Icons } from '@/lib/icons';
+import * as Haptics from 'expo-haptics';
+
+// Order status configuration
+const ORDER_STATUSES = [
+  {
+    id: 'pending',
+    title: 'Order Placed',
+    icon: 'CheckCircle',
+    description: 'Your order has been received',
+  },
+  {
+    id: 'confirmed',
+    title: 'Confirmed',
+    icon: 'Clock',
+    description: 'Restaurant confirmed your order',
+  },
+  {
+    id: 'preparing',
+    title: 'Preparing',
+    icon: 'ChefHat',
+    description: 'Your food is being prepared',
+  },
+  {
+    id: 'ready',
+    title: 'Ready for Pickup',
+    icon: 'Package',
+    description: 'Order is ready',
+  },
+  {
+    id: 'out_for_delivery',
+    title: 'Out for Delivery',
+    icon: 'Bike',
+    description: 'Driver is on the way',
+  },
+  {
+    id: 'delivered',
+    title: 'Delivered',
+    icon: 'CheckCircle',
+    description: 'Order delivered successfully',
+  },
+];
 
 const OrderTracking = () => {
-  const { orderId } = useLocalSearchParams();
-  const { defaultAddress } = useAddressStore();
+  const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
-  const [deliveryPerson, setDeliveryPerson] = useState<any>(null);
-  const [showMap, setShowMap] = useState(false);
-
-  const orderSteps = [
-    { id: 'placed', title: 'Order Placed', time: '2:30 PM', completed: true },
-    { id: 'confirmed', title: 'Order Confirmed', time: '2:32 PM', completed: true },
-    { id: 'preparing', title: 'Preparing Food', time: '2:35 PM', completed: true },
-    { id: 'out_for_delivery', title: 'Out for Delivery', time: '3:15 PM', completed: true },
-    { id: 'delivered', title: 'Delivered', time: '3:45 PM', completed: false },
-  ];
-
-  const currentStep = orderSteps.findIndex(step => !step.completed);
-  const estimatedDelivery = '3:45 PM';
 
   useEffect(() => {
+    if (!orderId) return;
+
     loadOrderData();
+
+    // Subscribe to real-time order status updates
+    const unsubscribe = subscribeToOrderStatus(orderId, (updatedOrder) => {
+      console.log('📡 Real-time update received:', updatedOrder);
+      setOrder((prev: any) => ({ ...prev, ...updatedOrder }));
+      
+      // Haptic feedback on status change
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [orderId]);
 
   const loadOrderData = async () => {
     try {
       setLoading(true);
-      // Simulate loading order data
-      const mockOrder = {
-        id: orderId,
-        status: 'out_for_delivery',
-        total: 25.99,
-        estimatedDelivery: '3:45 PM',
-        restaurantLocation: {
-          latitude: 41.9028,
-          longitude: 12.4964,
-          name: 'Musti Place Restaurant'
-        },
-        deliveryPersonLocation: {
-          latitude: 41.9038,
-          longitude: 12.4974,
-          name: 'Marco Rossi'
-        },
-        customerLocation: {
-          latitude: 41.9048,
-          longitude: 12.4984
-        },
-        items: [
-          { name: 'Classic Cheeseburger', quantity: 1, price: 12.99 },
-          { name: 'French Fries', quantity: 1, price: 4.99 },
-          { name: 'Coca Cola', quantity: 1, price: 2.99 },
-        ],
-        deliveryAddress: {
-          street: '123 Main St',
-          city: 'Rome',
-          zip: '00100',
-        },
-        paymentMethod: 'Credit Card',
-        orderTime: '2:30 PM',
-      };
-
-      const mockDeliveryPerson = {
-        name: 'Marco Rossi',
-        rating: 4.8,
-        phone: '+39 123 456 7890',
-        photo: 'https://ui-avatars.com/api/?name=Marco+Rossi&background=random',
-        vehicle: 'Scooter',
-        eta: '15 minutes',
-      };
-
-      setOrder(mockOrder);
-      setDeliveryPerson(mockDeliveryPerson);
+      const orderData = await getOrderDetails(orderId!);
+      console.log('📦 Order loaded:', orderData);
+      setOrder(orderData);
     } catch (error) {
       console.error('Error loading order:', error);
     } finally {
@@ -96,290 +99,691 @@ const OrderTracking = () => {
     }
   };
 
-  const handleCallDelivery = () => {
-    Alert.alert(
-      'Call Delivery Person',
-      `Call ${deliveryPerson?.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call', onPress: () => {
-          // In a real app, this would initiate a phone call
-          Alert.alert('Calling...', `Calling ${deliveryPerson?.phone}`);
-        }}
-      ]
-    );
+  const getCurrentStatusIndex = () => {
+    if (!order?.status) return 0;
+    return ORDER_STATUSES.findIndex(s => s.id === order.status);
   };
 
-  const handleMessageDelivery = () => {
+  const getEstimatedDeliveryTime = () => {
+    const now = new Date();
+    const estimatedMinutes = order?.delivery_time || 35;
+    const deliveryTime = new Date(now.getTime() + estimatedMinutes * 60000);
+    return deliveryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleCallRestaurant = () => {
+    if (!order?.restaurants?.phone) {
+      Alert.alert('Phone number not available');
+      return;
+    }
+
     Alert.alert(
-      'Message Delivery Person',
-      'Send a message to your delivery person?',
+      'Call Restaurant',
+      `Call ${order.restaurants.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Send Message', onPress: () => {
-          // In a real app, this would open a messaging interface
-          Alert.alert('Message', 'Opening messaging interface...');
-        }}
+        {
+          text: 'Call',
+          onPress: () => {
+            Linking.openURL(`tel:${order.restaurants.phone}`);
+          },
+        },
       ]
     );
   };
 
   const handleCancelOrder = () => {
+    if (order?.status === 'delivered' || order?.status === 'cancelled') {
+      Alert.alert('Cannot cancel', 'This order cannot be cancelled');
+      return;
+    }
+
     Alert.alert(
       'Cancel Order',
       'Are you sure you want to cancel this order?',
       [
         { text: 'No', style: 'cancel' },
-        { text: 'Yes, Cancel', style: 'destructive', onPress: () => {
-          Alert.alert('Order Cancelled', 'Your order has been cancelled and you will receive a full refund.');
-        }}
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { cancelOrder } = await import('../lib/orderService');
+              await cancelOrder({
+                orderId: order.id,
+                reason: 'Customer requested cancellation',
+                reasonType: 'customer_request',
+              });
+              Alert.alert('Order Cancelled', 'Your order has been cancelled successfully');
+              router.replace('/(tabs)/orders');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to cancel order');
+            }
+          },
+        },
       ]
     );
   };
 
+  const calculateTotal = () => {
+    if (!order?.order_items) return 0;
+    return order.order_items.reduce((sum: number, item: any) => {
+      return sum + (item.unit_price * item.quantity);
+    }, 0);
+  };
+
+  const getStatusColor = (statusId: string) => {
+    const currentIndex = getCurrentStatusIndex();
+    const statusIndex = ORDER_STATUSES.findIndex(s => s.id === statusId);
+
+    if (statusIndex < currentIndex) return Colors.success[500];
+    if (statusIndex === currentIndex) return Colors.primary[500];
+    return Colors.neutral[300];
+  };
+
+  const isStatusCompleted = (statusId: string) => {
+    const currentIndex = getCurrentStatusIndex();
+    const statusIndex = ORDER_STATUSES.findIndex(s => s.id === statusId);
+    return statusIndex < currentIndex;
+  };
+
+  const isStatusCurrent = (statusId: string) => {
+    return order?.status === statusId;
+  };
+
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 justify-center items-center">
-          <Text className="text-lg text-gray-600">Loading order details...</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary[500]} />
+          <Text style={styles.loadingText}>Loading order details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!order) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Icons.AlertCircle size={64} color={Colors.error[500]} />
+          <Text style={styles.errorTitle}>Order not found</Text>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.replace('/(tabs)')}
+          >
+            <Text style={styles.primaryButtonText}>Go to Home</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View className="px-5 pt-4 pb-6 border-b border-gray-200">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center mr-4"
-          >
-            <Image source={images.arrowBack} className="w-5 h-5" tintColor="#333" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-xl font-bold text-gray-900">Track Order</Text>
-            <Text className="text-gray-600">Order #{order?.id?.slice(-6) || '123456'}</Text>
-          </View>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Icons.ChevronLeft size={24} color={Colors.text.primary} />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Track Order</Text>
+          <Text style={styles.headerSubtitle}>
+            Order #{order.id?.slice(-6) || '------'}
+          </Text>
         </View>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Estimated Delivery Time */}
-        <View className="px-5 py-6 bg-blue-50">
-          <View className="flex-row items-center justify-center mb-3">
-            <Image source={images.clock} className="w-6 h-6 mr-2" tintColor="#3B82F6" />
-            <Text className="text-lg font-semibold text-blue-900">Estimated Delivery</Text>
-          </View>
-          <Text className="text-3xl font-bold text-blue-900 text-center mb-2">
-            {estimatedDelivery}
-          </Text>
-          <Text className="text-blue-700 text-center">
-            Your order is on its way!
-          </Text>
-        </View>
-
-        {/* Progress Tracker */}
-        <View className="px-5 py-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-6">Order Progress</Text>
-          
-          <View className="space-y-4">
-            {orderSteps.map((step, index) => (
-              <View key={step.id} className="flex-row items-center">
-                <View className="w-8 h-8 rounded-full items-center justify-center mr-4">
-                  {step.completed ? (
-                    <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center">
-                      <Image source={images.check} className="w-4 h-4" tintColor="white" />
-                    </View>
-                  ) : index === currentStep ? (
-                    <View className="w-8 h-8 bg-blue-500 rounded-full items-center justify-center">
-                      <View className="w-3 h-3 bg-white rounded-full" />
-                    </View>
-                  ) : (
-                    <View className="w-8 h-8 border-2 border-gray-300 rounded-full" />
-                  )}
-                </View>
-                
-                <View className="flex-1">
-                  <Text className={cn(
-                    'font-medium',
-                    step.completed ? 'text-green-600' : 
-                    index === currentStep ? 'text-blue-600' : 'text-gray-500'
-                  )}>
-                    {step.title}
-                  </Text>
-                  <Text className="text-sm text-gray-500">{step.time}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Delivery Person Details */}
-        {deliveryPerson && (
-          <View className="px-5 py-6 bg-white border-t border-gray-200">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">Delivery Person</Text>
-            
-            <View className="bg-gray-50 rounded-xl p-4">
-              <View className="flex-row items-center mb-4">
-                <Image 
-                  source={{ uri: deliveryPerson.photo }} 
-                  className="w-12 h-12 rounded-full mr-4"
-                />
-                <View className="flex-1">
-                  <Text className="text-lg font-semibold text-gray-900">
-                    {deliveryPerson.name}
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Image source={images.star} className="w-4 h-4 mr-1" tintColor="#FFD700" />
-                    <Text className="text-gray-600">{deliveryPerson.rating} ★</Text>
-                  </View>
-                </View>
-              </View>
-              
-              <View className="flex-row items-center justify-between">
-                <TouchableOpacity
-                  onPress={handleCallDelivery}
-                  className="flex-1 bg-green-500 py-3 rounded-lg items-center mr-2"
-                >
-                  <Image source={images.phone} className="w-5 h-5 mb-1" tintColor="white" />
-                  <Text className="text-white font-medium">Call</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  onPress={handleMessageDelivery}
-                  className="flex-1 bg-blue-500 py-3 rounded-lg items-center ml-2"
-                >
-                  <Image source={images.envelope} className="w-5 h-5 mb-1" tintColor="white" />
-                  <Text className="text-white font-medium">Message</Text>
-                </TouchableOpacity>
-              </View>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Estimated Delivery Time Card */}
+        {order.status !== 'delivered' && order.status !== 'cancelled' && (
+          <View style={styles.deliveryCard}>
+            <View style={styles.deliveryHeader}>
+              <Icons.Clock size={28} color={Colors.primary[500]} />
+              <Text style={styles.deliveryLabel}>Estimated Delivery</Text>
             </View>
+            <Text style={styles.deliveryTime}>{getEstimatedDeliveryTime()}</Text>
+            <Text style={styles.deliverySubtext}>
+              {order.status === 'out_for_delivery' 
+                ? 'Your order is on its way!' 
+                : 'Your order is being prepared'}
+            </Text>
           </View>
         )}
 
-        {/* Map View */}
-        <View className="px-5 py-6">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-lg font-semibold text-gray-900">Live Tracking</Text>
-            <TouchableOpacity
-              onPress={() => setShowMap(!showMap)}
-              className="bg-blue-500 px-4 py-2 rounded-lg"
-            >
-              <Text className="text-white font-medium">
-                {showMap ? 'Hide Map' : 'Show Map'}
-              </Text>
-            </TouchableOpacity>
+        {/* Delivered Success Card */}
+        {order.status === 'delivered' && (
+          <View style={styles.deliveredCard}>
+            <Icons.CheckCircle size={64} color={Colors.success[500]} />
+            <Text style={styles.deliveredTitle}>Delivered Successfully!</Text>
+            <Text style={styles.deliveredSubtext}>
+              Hope you enjoy your meal!
+            </Text>
           </View>
-          
-          {showMap ? (
-            <View className="h-80 rounded-xl overflow-hidden">
-              <OrderTrackingMap
-                orderId={order?.id || ''}
-                restaurantLocation={order?.restaurantLocation || {
-                  latitude: 41.9028,
-                  longitude: 12.4964,
-                  name: 'Restaurant'
-                }}
-                deliveryPersonLocation={order?.deliveryPersonLocation}
-                customerLocation={order?.customerLocation}
-                orderStatus={order?.status || 'preparing'}
-              />
-            </View>
-          ) : (
-            <View className="bg-gray-100 rounded-xl h-48 items-center justify-center">
-              <Image source={images.location} className="w-12 h-12 mb-3" tintColor="#6B7280" />
-              <Text className="text-gray-600 font-medium">Map View</Text>
-              <Text className="text-gray-500 text-sm">Real-time delivery tracking</Text>
-            </View>
-          )}
+        )}
+
+        {/* Order Progress Timeline */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Progress</Text>
+
+          <View style={styles.timeline}>
+            {ORDER_STATUSES.map((status, index) => {
+              const isCompleted = isStatusCompleted(status.id);
+              const isCurrent = isStatusCurrent(status.id);
+              const statusColor = getStatusColor(status.id);
+
+              return (
+                <View key={status.id} style={styles.timelineItem}>
+                  {/* Timeline Connector Line */}
+                  {index > 0 && (
+                    <View
+                      style={[
+                        styles.timelineConnector,
+                        {
+                          backgroundColor: isCompleted
+                            ? Colors.success[500]
+                            : Colors.neutral[200],
+                        },
+                      ]}
+                    />
+                  )}
+
+                  {/* Status Icon */}
+                  <View
+                    style={[
+                      styles.timelineIcon,
+                      {
+                        backgroundColor: isCurrent
+                          ? Colors.primary[50]
+                          : isCompleted
+                          ? Colors.success[50]
+                          : Colors.neutral[100],
+                        borderColor: statusColor,
+                        borderWidth: 2,
+                      },
+                    ]}
+                  >
+                    {isCompleted ? (
+                      <Icons.CheckCircle size={24} color={Colors.success[500]} />
+                    ) : isCurrent ? (
+                      <View style={styles.currentDot} />
+                    ) : (
+                      <View style={styles.pendingDot} />
+                    )}
+                  </View>
+
+                  {/* Status Details */}
+                  <View style={styles.timelineContent}>
+                    <Text
+                      style={[
+                        styles.timelineTitle,
+                        {
+                          color: isCurrent
+                            ? Colors.primary[500]
+                            : isCompleted
+                            ? Colors.text.primary
+                            : Colors.text.secondary,
+                        },
+                      ]}
+                    >
+                      {status.title}
+                    </Text>
+                    <Text style={styles.timelineDescription}>
+                      {status.description}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
-        {/* Delivery Address */}
-        {defaultAddress && (
-          <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md }}>
-            <View style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.lg,
-              ...Shadows.sm,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md }}>
-                <Icons.Location size={20} color={Colors.primary[500]} />
-                <Text style={[Typography.h6, { color: Colors.neutral[900], marginLeft: Spacing.sm }]}>
-                  Delivery Address
+        {/* Restaurant Info */}
+        {order.restaurants && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Restaurant</Text>
+            <View style={styles.restaurantCard}>
+              <View style={styles.restaurantIconContainer}>
+                <Icons.Utensils size={24} color={Colors.primary[500]} />
+              </View>
+              <View style={styles.restaurantInfo}>
+                <Text style={styles.restaurantName}>{order.restaurants.name}</Text>
+                <Text style={styles.restaurantAddress}>
+                  {order.restaurants.address}
                 </Text>
               </View>
-              <AddressCard
-                address={defaultAddress}
-                variant="minimal"
-                showActions={false}
-              />
+              <TouchableOpacity
+                onPress={handleCallRestaurant}
+                style={styles.callButton}
+              >
+                <Icons.Phone size={20} color={Colors.primary[500]} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
 
         {/* Order Details */}
-        <View className="px-5 py-6">
+        <View style={styles.section}>
           <TouchableOpacity
-            onPress={() => setShowDetails(!showDetails)}
-            className="bg-white border border-gray-200 rounded-xl p-6"
+            style={styles.summaryHeader}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowDetails(!showDetails);
+            }}
+            activeOpacity={0.7}
           >
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-semibold text-gray-900">Order Details</Text>
-              <Image 
-                source={images.arrowDown} 
-                className="w-5 h-5" 
-                tintColor="#6B7280"
-                style={{ transform: [{ rotate: showDetails ? '180deg' : '0deg' }] }}
-              />
-            </View>
-            
-            {showDetails && (
-              <View className="mt-4 space-y-3">
-                {order?.items?.map((item: any, index: number) => (
-                  <View key={index} className="flex-row justify-between">
-                    <Text className="text-gray-700">
-                      {item.quantity}x {item.name}
-                    </Text>
-                    <Text className="text-gray-900 font-medium">
-                      €{(item.price * item.quantity).toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
-                
-                <View className="border-t border-gray-200 pt-3">
-                  <View className="flex-row justify-between">
-                    <Text className="text-lg font-bold text-gray-900">Total</Text>
-                    <Text className="text-lg font-bold text-gray-900">
-                      €{order?.total?.toFixed(2) || '25.99'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
+            <Text style={styles.sectionTitle}>Order Details</Text>
+            <Icons.ChevronDown
+              size={20}
+              color={Colors.text.secondary}
+              style={{
+                transform: [{ rotate: showDetails ? '180deg' : '0deg' }],
+              }}
+            />
           </TouchableOpacity>
+
+          {showDetails && (
+            <View style={styles.orderDetailsCard}>
+              {order.order_items?.map((item: any, index: number) => (
+                <View key={index} style={styles.orderItem}>
+                  <Text style={styles.orderItemQuantity}>{item.quantity}x</Text>
+                  <Text style={styles.orderItemName}>
+                    {item.menu_items?.name || 'Item'}
+                  </Text>
+                  <Text style={styles.orderItemPrice}>
+                    ${(item.unit_price * item.quantity).toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+
+              <View style={styles.divider} />
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalPrice}>${calculateTotal().toFixed(2)}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
-        <View className="px-5 py-6">
-          <View className="flex-row space-x-3">
-            <TouchableOpacity className="flex-1 bg-gray-100 py-3 rounded-lg items-center">
-              <Text className="text-gray-700 font-medium">Need Help?</Text>
-            </TouchableOpacity>
-            
+        {order.status !== 'delivered' && order.status !== 'cancelled' && (
+          <View style={styles.actionsContainer}>
             <TouchableOpacity
+              style={styles.cancelButton}
               onPress={handleCancelOrder}
-              className="flex-1 bg-red-100 py-3 rounded-lg items-center"
+              activeOpacity={0.8}
             >
-              <Text className="text-red-600 font-medium">Cancel Order</Text>
+              <Text style={styles.cancelButtonText}>Cancel Order</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Help Section */}
+        <View style={styles.helpSection}>
+          <Text style={styles.helpTitle}>Need Help?</Text>
+          <Text style={styles.helpText}>
+            Having issues with your order? Contact our support team.
+          </Text>
+
+          <TouchableOpacity style={styles.helpAction}>
+            <Icons.MessageCircle size={20} color={Colors.primary[500]} />
+            <Text style={styles.helpActionText}>Chat with Support</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Bottom Spacing */}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: Spacing.lg,
+    fontSize: 16,
+    color: Colors.text.secondary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  errorTitle: {
+    marginTop: Spacing.lg,
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.background.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.background.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    fontFamily: 'Georgia',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xxl,
+  },
+  deliveryCard: {
+    backgroundColor: Colors.primary[50],
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+  },
+  deliveryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  deliveryLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  deliveryTime: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: Colors.primary[500],
+    fontFamily: 'Georgia',
+    marginVertical: Spacing.sm,
+  },
+  deliverySubtext: {
+    fontSize: 15,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  deliveredCard: {
+    backgroundColor: Colors.success[50],
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    padding: Spacing.xxl,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.success[200],
+  },
+  deliveredTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    fontFamily: 'Georgia',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  deliveredSubtext: {
+    fontSize: 15,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  section: {
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: Spacing.lg,
+    fontFamily: 'Georgia',
+  },
+  timeline: {
+    paddingLeft: Spacing.sm,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    marginBottom: Spacing.xl,
+    position: 'relative',
+  },
+  timelineConnector: {
+    position: 'absolute',
+    left: 19,
+    top: -24,
+    width: 2,
+    height: 32,
+  },
+  timelineIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  currentDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.primary[500],
+  },
+  pendingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.neutral[300],
+  },
+  timelineContent: {
+    flex: 1,
+    paddingTop: 4,
+  },
+  timelineTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  timelineDescription: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+  },
+  restaurantCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.card,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+  },
+  restaurantIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  restaurantInfo: {
+    flex: 1,
+  },
+  restaurantName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  restaurantAddress: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  callButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orderDetailsCard: {
+    backgroundColor: Colors.background.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginTop: Spacing.md,
+    ...Shadows.sm,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  orderItemQuantity: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    width: 40,
+  },
+  orderItemName: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  orderItemPrice: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.neutral[200],
+    marginVertical: Spacing.md,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    fontFamily: 'Georgia',
+  },
+  totalPrice: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.primary[500],
+    fontFamily: 'Georgia',
+  },
+  actionsContainer: {
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+  },
+  primaryButton: {
+    backgroundColor: Colors.primary[500],
+    paddingVertical: 16,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    ...Shadows.md,
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  cancelButton: {
+    backgroundColor: Colors.background.card,
+    paddingVertical: 16,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.error[500],
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.error[500],
+  },
+  helpSection: {
+    backgroundColor: Colors.background.card,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+  },
+  helpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+    fontFamily: 'Georgia',
+  },
+  helpText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  helpAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  helpActionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary[500],
+  },
+});
 
 export default OrderTracking;

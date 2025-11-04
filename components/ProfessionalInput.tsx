@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TextInput, View, Text, TextInputProps } from 'react-native';
-import { useTheme } from '@/lib/theme';
-import { ComponentStyles } from '@/lib/theme';
+import { useTheme } from '../lib/theme';
+import { ComponentStyles } from '../lib/theme';
 import { ProfessionalText } from './ProfessionalText';
 
 interface ProfessionalInputProps extends TextInputProps {

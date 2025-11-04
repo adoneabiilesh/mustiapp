@@ -126,7 +126,7 @@ export const PaymentSheet: React.FC<PaymentSheetProps> = ({
             onPress={handlePayment}
             disabled={loading}
           >
-            <View className="w-12 h-8 bg-blue-600 rounded-lg items-center justify-center mr-4">
+            <View className="w-12 h-8 bg-red-600 rounded-lg items-center justify-center mr-4">
               <Icons name="credit-card" size={20} color="white" />
             </View>
             <View className="flex-1">
@@ -170,12 +170,12 @@ export const PaymentSheet: React.FC<PaymentSheetProps> = ({
         </View>
 
         {/* Security Notice */}
-        <View className="bg-blue-50 rounded-xl p-4 mb-6">
+        <View className="bg-red-50 rounded-xl p-4 mb-6">
           <View className="flex-row items-center mb-2">
-            <Icons name="shield-check" size={20} color="#3B82F6" />
-            <Text className="text-blue-900 font-medium ml-2">Secure Payment</Text>
+            <Icons name="shield-check" size={20} color="#E53E3E" />
+            <Text className="text-red-900 font-medium ml-2">Secure Payment</Text>
           </View>
-          <Text className="text-blue-800 text-sm">
+          <Text className="text-red-800 text-sm">
             Your payment information is encrypted and secure. We never store your card details.
           </Text>
         </View>

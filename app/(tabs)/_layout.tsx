@@ -5,7 +5,7 @@ import { Image, Text, View } from "react-native";
 import { images } from "../../constants";
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/lib/designSystem';
 
-const TabBarIcon = ({ focused, icon, title }: TabBarIconProps) => (
+const TabBarIcon = ({ focused, icon }: { focused: boolean; icon: any }) => (
   <View style={{ 
     alignItems: 'center', 
     justifyContent: 'center', 
@@ -14,92 +14,83 @@ const TabBarIcon = ({ focused, icon, title }: TabBarIconProps) => (
   }}>
     <Image 
       source={icon} 
+      tintColor={focused ? Colors.primary[500] : Colors.neutral[400]}
       style={{ 
         width: 20, 
         height: 20, 
         marginBottom: 2,
-        tintColor: focused ? Colors.primary[500] : Colors.neutral[400]
       }} 
       resizeMode="contain"
     />
-    <Text style={{
-      fontSize: 10,
-      fontWeight: focused ? '600' : '500',
-      color: focused ? Colors.primary[500] : Colors.neutral[500],
-      textAlign: 'center',
-    }}>
-      {title}
-    </Text>
   </View>
 );
 
 export default function TabLayout() {
   const { isAuthenticated } = useAuthStore();
 
-  if (!isAuthenticated) return <Redirect href="/sign-in" />
+  // Allow browsing without authentication
+  // Login will be required only when placing orders
 
   return (
     <Tabs screenOptions={{
       headerShown: false,
       tabBarShowLabel: true,
       tabBarLabelStyle: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '500',
-        marginTop: 2,
+        marginTop: 1,
+        marginBottom: 2,
       },
       tabBarStyle: {
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: Colors.neutral[200],
-        height: 70,
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingBottom: 8,
-        paddingTop: 6,
-        paddingHorizontal: 12,
+        height: 60,
+        paddingBottom: 4,
+        paddingTop: 4,
+        paddingHorizontal: 8,
         ...Shadows.lg,
       },
       tabBarActiveTintColor: Colors.primary[500],
       tabBarInactiveTintColor: Colors.neutral[500],
       tabBarIconStyle: {
-        marginTop: 2,
+        marginTop: 0,
+        marginBottom: 2,
       },
     }}>
       <Tabs.Screen
         name='index'
         options={{
           title: 'Menu',
-          tabBarIcon: ({ focused }) => <TabBarIcon title="Menu" icon={images.home} focused={focused} />
+          tabBarIcon: ({ focused }) => <TabBarIcon icon={images.home} focused={focused} />
         }}
       />
       <Tabs.Screen
         name='search'
         options={{
           title: 'Search',
-          tabBarIcon: ({ focused }) => <TabBarIcon title="Search" icon={images.search} focused={focused} />
+          tabBarIcon: ({ focused }) => <TabBarIcon icon={images.search} focused={focused} />
         }}
       />
       <Tabs.Screen
         name='cart'
         options={{
           title: 'Cart',
-          tabBarIcon: ({ focused }) => <TabBarIcon title="Cart" icon={images.bag} focused={focused} />
+          tabBarIcon: ({ focused }) => <TabBarIcon icon={images.bag} focused={focused} />
         }}
       />
       <Tabs.Screen
         name='orders'
         options={{
           title: 'Orders',
-          tabBarIcon: ({ focused }) => <TabBarIcon title="Orders" icon={images.clock} focused={focused} />
+          tabBarIcon: ({ focused }) => <TabBarIcon icon={images.clock} focused={focused} />
         }}
       />
       <Tabs.Screen
         name='profile'
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabBarIcon title="Profile" icon={images.person} focused={focused} />
+          tabBarIcon: ({ focused }) => <TabBarIcon icon={images.person} focused={focused} />
         }}
       />
     </Tabs>

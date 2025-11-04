@@ -5,46 +5,45 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Image,
+  StyleSheet,
   Animated,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { images } from '@/constants';
-import { createOrder } from '../lib/supabase';
-import useAuthStore from '../store/auth.store';
-import { useCartStore } from '../store/cart.store';
-import { useAddressStore } from '../store/address.store';
-import { AddressCard } from '../components/AddressCard';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../lib/designSystem';
-import { Icons } from '../lib/icons';
+import { getOrderDetails } from '@/lib/database';
+import { Colors, Spacing, BorderRadius, Shadows } from '@/lib/designSystem';
+import { Icons } from '@/lib/icons';
+import * as Haptics from 'expo-haptics';
 
 const OrderConfirmation = () => {
-  const { orderId } = useLocalSearchParams();
-  const { user } = useAuthStore();
-  const { clearCart } = useCartStore();
-  const { defaultAddress } = useAddressStore();
+  const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [checkmarkScale] = useState(new Animated.Value(0));
+  const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState<string>('');
+  const [deliveryTimeRange, setDeliveryTimeRange] = useState<string>('');
 
   useEffect(() => {
     if (orderId) {
       loadOrderDetails();
+      animateCheckmark();
     }
-    animateCheckmark();
   }, [orderId]);
 
   const animateCheckmark = () => {
     Animated.sequence([
-      Animated.timing(checkmarkScale, {
+      Animated.spring(checkmarkScale, {
         toValue: 1.2,
-        duration: 200,
+        tension: 50,
+        friction: 3,
         useNativeDriver: true,
       }),
-      Animated.timing(checkmarkScale, {
+      Animated.spring(checkmarkScale, {
         toValue: 1,
-        duration: 200,
+        tension: 50,
+        friction: 3,
         useNativeDriver: true,
       }),
     ]).start();
@@ -53,27 +52,14 @@ const OrderConfirmation = () => {
   const loadOrderDetails = async () => {
     try {
       setLoading(true);
-      // In a real app, you would fetch order details from the backend
-      // For now, we'll simulate the order data
-      const mockOrder = {
-        id: orderId,
-        status: 'confirmed',
-        total: 25.99,
-        estimatedDelivery: '30-45 minutes',
-        items: [
-          { name: 'Classic Cheeseburger', quantity: 1, price: 12.99 },
-          { name: 'French Fries', quantity: 1, price: 4.99 },
-          { name: 'Coca Cola', quantity: 1, price: 2.99 },
-        ],
-        deliveryAddress: {
-          street: '123 Main St',
-          city: 'Rome',
-          zip: '00100',
-        },
-        paymentMethod: 'Credit Card',
-        orderTime: new Date().toLocaleString(),
-      };
-      setOrder(mockOrder);
+      const orderData = await getOrderDetails(orderId!);
+      console.log('📦 Order details loaded:', orderData);
+      setOrder(orderData);
+      
+      // Calculate real delivery time based on restaurant settings
+      if (orderData) {
+        await calculateDeliveryTime(orderData);
+      }
     } catch (error) {
       console.error('Error loading order:', error);
     } finally {
@@ -81,198 +67,534 @@ const OrderConfirmation = () => {
     }
   };
 
+  const calculateDeliveryTime = async (orderData: any) => {
+    try {
+      // Get restaurant settings for preparation time
+      const { getRestaurantSettings } = await import('@/lib/database');
+      const settings = await getRestaurantSettings(orderData.restaurant_id);
+      
+      // Calculate delivery time components
+      const preparationTime = settings?.preparation_time || 30; // From restaurant settings
+      const deliveryTime = 15; // Base delivery time (could calculate based on distance)
+      const totalMinutes = preparationTime + deliveryTime;
+      
+      // Get order creation time
+      const orderTime = new Date(orderData.created_at);
+      const estimatedTime = new Date(orderTime.getTime() + totalMinutes * 60000);
+      
+      // Calculate time range (±5 minutes for min, ±10 for max)
+      const minTime = new Date(orderTime.getTime() + (totalMinutes - 5) * 60000);
+      const maxTime = new Date(orderTime.getTime() + (totalMinutes + 10) * 60000);
+      
+      // Format times
+      const timeOptions: Intl.DateTimeFormatOptions = { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      };
+      
+      const formattedEstimate = estimatedTime.toLocaleTimeString('en-US', timeOptions);
+      const formattedRange = `${minTime.toLocaleTimeString('en-US', timeOptions)} - ${maxTime.toLocaleTimeString('en-US', timeOptions)}`;
+      
+      setEstimatedDeliveryTime(formattedEstimate);
+      setDeliveryTimeRange(formattedRange);
+      
+      console.log('⏰ Real-time delivery estimate:', {
+        preparationTime: `${preparationTime} mins`,
+        deliveryTime: `${deliveryTime} mins`,
+        total: `${totalMinutes} mins`,
+        estimatedAt: formattedEstimate,
+        range: formattedRange,
+      });
+    } catch (error) {
+      console.error('Error calculating delivery time:', error);
+      // Fallback to default estimate
+      const now = new Date();
+      const defaultTime = new Date(now.getTime() + 45 * 60000);
+      setEstimatedDeliveryTime(defaultTime.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      }));
+      setDeliveryTimeRange('40-55 mins');
+    }
+  };
+
   const getEstimatedDeliveryTime = () => {
-    const now = new Date();
-    const deliveryTime = new Date(now.getTime() + 45 * 60000); // 45 minutes from now
-    return deliveryTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Return calculated time or fallback
+    return estimatedDeliveryTime || 'Calculating...';
+  };
+
+  const getDeliveryTimeRange = () => {
+    return deliveryTimeRange || 'TBD';
+  };
+
+  const calculateTotal = () => {
+    if (!order?.order_items) return 0;
+    return order.order_items.reduce((sum: number, item: any) => {
+      return sum + (item.unit_price * item.quantity);
+    }, 0);
   };
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
-        <View className="flex-1 justify-center items-center">
-          <Text className="text-lg text-gray-600">Loading order details...</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary[500]} />
+          <Text style={styles.loadingText}>Loading order details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!order) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Icons.AlertCircle size={64} color={Colors.error[500]} />
+          <Text style={styles.errorTitle}>Order not found</Text>
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={() => router.replace('/(tabs)')}
+          >
+            <Text style={styles.homeButtonText}>Go to Home</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Success Animation */}
-        <View className="items-center py-12">
+        <View style={styles.successContainer}>
           <Animated.View
-            style={{
-              transform: [{ scale: checkmarkScale }],
-            }}
-            className="w-24 h-24 bg-green-500 rounded-full items-center justify-center mb-6"
+            style={[
+              styles.checkmarkContainer,
+              { transform: [{ scale: checkmarkScale }] },
+            ]}
           >
-            <Image source={images.check} className="w-12 h-12" tintColor="white" />
+            <Icons.CheckCircle size={80} color={Colors.success[500]} />
           </Animated.View>
-          
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
-            Order Placed Successfully!
-          </Text>
-          <Text className="text-gray-600 text-center mb-6">
+
+          <Text style={styles.successTitle}>Order Placed!</Text>
+          <Text style={styles.successSubtitle}>
             Your order has been confirmed and is being prepared
           </Text>
-          
-          <View className="bg-green-50 px-6 py-4 rounded-xl mb-6">
-            <Text className="text-green-800 font-semibold text-center">
-              Order #{order?.id?.slice(-6) || '123456'}
+
+          <View style={styles.orderNumberBadge}>
+            <Text style={styles.orderNumberText}>
+              Order #{order.id?.slice(-6) || '------'}
             </Text>
           </View>
         </View>
 
         {/* Estimated Delivery */}
-        <View className="px-5 mb-6">
-          <View className="bg-blue-50 rounded-xl p-6">
-            <View className="flex-row items-center mb-3">
-              <Image source={images.clock} className="w-6 h-6 mr-3" tintColor="#3B82F6" />
-              <Text className="text-lg font-semibold text-blue-900">Estimated Delivery</Text>
-            </View>
-            <Text className="text-2xl font-bold text-blue-900 mb-2">
-              {getEstimatedDeliveryTime()}
-            </Text>
-            <Text className="text-blue-700">
-              Your order will arrive in approximately 30-45 minutes
-            </Text>
+        <View style={styles.deliveryCard}>
+          <View style={styles.deliveryHeader}>
+            <Icons.Clock size={24} color={Colors.primary[500]} />
+            <Text style={styles.deliveryTitle}>Estimated Delivery</Text>
           </View>
+          <Text style={styles.deliveryTime}>{getEstimatedDeliveryTime()}</Text>
+          <Text style={styles.deliveryRange}>{getDeliveryTimeRange()}</Text>
+          <Text style={styles.deliverySubtext}>
+            We'll notify you when it's on the way
+          </Text>
         </View>
 
-        {/* Delivery Address */}
-        {defaultAddress && (
-          <View style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md }}>
-            <View style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.lg,
-              ...Shadows.sm,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md }}>
-                <Icons.Location size={20} color={Colors.primary[500]} />
-                <Text style={[Typography.h6, { color: Colors.neutral[900], marginLeft: Spacing.sm }]}>
-                  Delivery Address
-                </Text>
+        {/* Restaurant Info */}
+        {order.restaurants && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Restaurant</Text>
+            <View style={styles.restaurantCard}>
+              <View style={styles.restaurantIconContainer}>
+                <Icons.Utensils size={22} color={Colors.primary[500]} />
               </View>
-              <AddressCard
-                address={defaultAddress}
-                variant="minimal"
-                showActions={false}
-              />
+              <View style={styles.restaurantInfo}>
+                <Text style={styles.restaurantName}>{order.restaurants.name}</Text>
+                <Text style={styles.restaurantAddress}>{order.restaurants.address}</Text>
+              </View>
             </View>
           </View>
         )}
 
         {/* Order Summary */}
-        <View className="px-5 mb-6">
+        <View style={styles.section}>
           <TouchableOpacity
-            onPress={() => setShowDetails(!showDetails)}
-            className="bg-white border border-gray-200 rounded-xl p-6"
+            style={styles.summaryHeader}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowDetails(!showDetails);
+            }}
+            activeOpacity={0.7}
           >
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-semibold text-gray-900">Order Summary</Text>
-              <Image 
-                source={images.arrowDown} 
-                className="w-5 h-5" 
-                tintColor="#6B7280"
-                style={{ transform: [{ rotate: showDetails ? '180deg' : '0deg' }] }}
-              />
-            </View>
-            
-            {showDetails && (
-              <View className="mt-4 space-y-3">
-                {order?.items?.map((item: any, index: number) => (
-                  <View key={index} className="flex-row justify-between">
-                    <Text className="text-gray-700">
-                      {item.quantity}x {item.name}
-                    </Text>
-                    <Text className="text-gray-900 font-medium">
-                      €{(item.price * item.quantity).toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
-                
-                <View className="border-t border-gray-200 pt-3">
-                  <View className="flex-row justify-between">
-                    <Text className="text-lg font-bold text-gray-900">Total</Text>
-                    <Text className="text-lg font-bold text-gray-900">
-                      €{order?.total?.toFixed(2) || '25.99'}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View className="mt-4 space-y-2">
-                  <View className="flex-row justify-between">
-                    <Text className="text-gray-600">Delivery Address</Text>
-                    <Text className="text-gray-900 text-right">
-                      {order?.deliveryAddress?.street}
-                      {'\n'}{order?.deliveryAddress?.city}, {order?.deliveryAddress?.zip}
-                    </Text>
-                  </View>
-                  
-                  <View className="flex-row justify-between">
-                    <Text className="text-gray-600">Payment Method</Text>
-                    <Text className="text-gray-900">{order?.paymentMethod}</Text>
-                  </View>
-                  
-                  <View className="flex-row justify-between">
-                    <Text className="text-gray-600">Order Time</Text>
-                    <Text className="text-gray-900">{order?.orderTime}</Text>
-                  </View>
-                </View>
-              </View>
-            )}
+            <Text style={styles.sectionTitle}>Order Summary</Text>
+            <Icons.ChevronDown
+              size={20}
+              color={Colors.text.secondary}
+              style={{
+                transform: [{ rotate: showDetails ? '180deg' : '0deg' }],
+              }}
+            />
           </TouchableOpacity>
+
+          {showDetails && (
+            <View style={styles.orderItemsContainer}>
+              {order.order_items?.map((item: any, index: number) => (
+                <View key={index} style={styles.orderItem}>
+                  <Text style={styles.orderItemQuantity}>{item.quantity}x</Text>
+                  <Text style={styles.orderItemName}>
+                    {item.menu_items?.name || 'Item'}
+                  </Text>
+                  <Text style={styles.orderItemPrice}>
+                    ${(item.unit_price * item.quantity).toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+
+              <View style={styles.divider} />
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalPrice}>${calculateTotal().toFixed(2)}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
-        <View className="px-5 mb-8">
+        <View style={styles.actionsContainer}>
           <TouchableOpacity
-            onPress={() => router.push(`/order-tracking?orderId=${orderId}`)}
-            className="bg-green-500 py-4 rounded-xl items-center mb-4"
+            style={styles.trackButton}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }
+              router.push(`/order-tracking?orderId=${orderId}`);
+            }}
+            activeOpacity={0.8}
           >
-            <Text className="text-white text-lg font-bold">Track Order</Text>
+            <Icons.MapPin size={20} color="#FFFFFF" />
+            <Text style={styles.trackButtonText}>Track Order</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/index')}
-            className="bg-gray-100 py-4 rounded-xl items-center"
+            style={styles.homeButton}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.replace('/(tabs)');
+            }}
+            activeOpacity={0.8}
           >
-            <Text className="text-gray-700 text-lg font-medium">Back to Home</Text>
+            <Text style={styles.homeButtonText}>Back to Home</Text>
           </TouchableOpacity>
         </View>
 
         {/* Help Section */}
-        <View className="px-5 mb-8">
-          <View className="bg-gray-50 rounded-xl p-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">Need Help?</Text>
-            <Text className="text-gray-600 mb-4">
-              If you have any questions about your order, our support team is here to help.
-            </Text>
-            
-            <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center">
-                <Image source={images.phone} className="w-5 h-5 mr-3" tintColor="#6B7280" />
-                <Text className="text-blue-600 font-medium">Call Support</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity className="flex-row items-center">
-                <Image source={images.envelope} className="w-5 h-5 mr-3" tintColor="#6B7280" />
-                <Text className="text-blue-600 font-medium">Email Support</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity className="flex-row items-center">
-                <Image source={images.envelope} className="w-5 h-5 mr-3" tintColor="#6B7280" />
-                <Text className="text-blue-600 font-medium">Live Chat</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.helpSection}>
+          <Text style={styles.helpTitle}>Need Help?</Text>
+          <Text style={styles.helpText}>
+            If you have any questions about your order, our support team is here to help.
+          </Text>
+
+          <View style={styles.helpActions}>
+            <TouchableOpacity style={styles.helpAction}>
+              <Icons.Phone size={20} color={Colors.text.secondary} />
+              <Text style={styles.helpActionText}>Call Support</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.helpAction}>
+              <Icons.Mail size={20} color={Colors.text.secondary} />
+              <Text style={styles.helpActionText}>Email Support</Text>
+            </TouchableOpacity>
           </View>
         </View>
+
+        {/* Bottom Spacing */}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xxl,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: Spacing.lg,
+    fontSize: 16,
+    color: Colors.text.secondary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  errorTitle: {
+    marginTop: Spacing.lg,
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  successContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+    paddingHorizontal: Spacing.xl,
+  },
+  checkmarkContainer: {
+    marginBottom: Spacing.lg,
+  },
+  successTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+    fontFamily: 'Georgia',
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    fontSize: 16,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    lineHeight: 24,
+  },
+  orderNumberBadge: {
+    backgroundColor: Colors.success[50],
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius['2xl'],
+    borderWidth: 1,
+    borderColor: Colors.success[200],
+  },
+  orderNumberText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.success[700],
+  },
+  deliveryCard: {
+    backgroundColor: Colors.primary[50],
+    marginHorizontal: Spacing.xl,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+  },
+  deliveryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  deliveryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  deliveryTime: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: Colors.primary[500],
+    fontFamily: 'Georgia',
+    marginBottom: Spacing.xs,
+  },
+  deliveryRange: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+  },
+  deliverySubtext: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+  },
+  section: {
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
+    fontFamily: 'Georgia',
+  },
+  restaurantCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.card,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+  },
+  restaurantIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  restaurantInfo: {
+    flex: 1,
+  },
+  restaurantName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  restaurantAddress: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  orderItemsContainer: {
+    backgroundColor: Colors.background.card,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    ...Shadows.sm,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  orderItemQuantity: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+    width: 40,
+  },
+  orderItemName: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  orderItemPrice: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.neutral[200],
+    marginVertical: Spacing.md,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    fontFamily: 'Georgia',
+  },
+  totalPrice: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.primary[500],
+    fontFamily: 'Georgia',
+  },
+  actionsContainer: {
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  trackButton: {
+    flexDirection: 'row',
+    backgroundColor: Colors.primary[500],
+    paddingVertical: 16,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    ...Shadows.md,
+  },
+  trackButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  homeButton: {
+    backgroundColor: Colors.background.card,
+    paddingVertical: 16,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.neutral[300],
+  },
+  homeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  helpSection: {
+    backgroundColor: Colors.background.card,
+    marginHorizontal: Spacing.xl,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+  },
+  helpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+    fontFamily: 'Georgia',
+  },
+  helpText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  helpActions: {
+    gap: Spacing.md,
+  },
+  helpAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  helpActionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary[500],
+  },
+});
 
 export default OrderConfirmation;

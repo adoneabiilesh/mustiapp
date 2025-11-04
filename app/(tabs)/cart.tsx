@@ -2,416 +2,524 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Alert,
   ScrollView,
   Image,
   TouchableOpacity,
   TextInput,
   SafeAreaView,
+  StyleSheet,
+  Platform,
 } from 'react-native';
-import { useCartStore } from '@/store/cart.store';
-import { images } from '@/constants';
-import useAuthStore from '@/store/auth.store';
-import { getUserPreferences, updateDefaultAddress } from '@/lib/userPreferences';
 import { router } from 'expo-router';
+import { useCartStore } from '@/store/cart.store';
+import useAuthStore from '@/store/auth.store';
 import { getImageSource } from '@/lib/imageUtils';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/lib/designSystem';
 import { Icons } from '@/lib/icons';
-import { RESTAURANT_CONFIG } from '@/lib/restaurantConfig';
-import { UnifiedButton } from '@/components/UnifiedButton';
+import * as Haptics from 'expo-haptics';
+import { AnimatedListItem } from '@/components/AnimatedComponents';
 
 const CartScreen = () => {
   const { items, increaseQty, decreaseQty, removeItem, clearCart, getTotalItems, getTotalPrice } = useCartStore();
-  const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
-  const { user } = useAuthStore();
-  const [userPreferences, setUserPreferences] = useState<any>(null);
+  const { user, isAuthenticated } = useAuthStore();
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [deliveryFee, setDeliveryFee] = useState(RESTAURANT_CONFIG.delivery.fee);
-  const [tax, setTax] = useState(0);
   const [discount, setDiscount] = useState(0);
 
-  useEffect(() => {
-    loadUserData();
-  }, [user?.$id]);
+  const totalItems = getTotalItems();
+  const totalPrice = getTotalPrice();
+  const deliveryFee = 2.99;
+  const tax = totalPrice * 0.1;
+  const finalTotal = totalPrice + tax + deliveryFee - discount;
 
-  const loadUserData = async () => {
-    if (user?.$id) {
-      try {
-        const preferences = await getUserPreferences(user.$id);
-        setUserPreferences(preferences);
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      }
-    }
-  };
-
-  const handleApplyCoupon = () => {
-    if (!couponCode.trim()) {
-      Alert.alert('Error', 'Please enter a coupon code');
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      router.push('/(auth)/sign-in');
       return;
     }
 
-    // Mock coupon validation
-    const validCoupons: { [key: string]: { discount: number; type: string } } = {
-      'WELCOME20': { discount: 20, type: 'percentage' },
-      'SAVE10': { discount: 10, type: 'percentage' },
-      'FREEDELIVERY': { discount: deliveryFee, type: 'fixed' },
-    };
+    if (items.length === 0) return;
 
-    const coupon = validCoupons[couponCode.toUpperCase()];
-    if (coupon) {
-      setAppliedCoupon({ code: couponCode.toUpperCase(), ...coupon });
-      if (coupon.type === 'percentage') {
-        setDiscount((totalPrice * coupon.discount) / 100);
-      } else {
-        setDiscount(coupon.discount);
-      }
-      Alert.alert('Success', 'Coupon applied successfully!');
-    } else {
-      Alert.alert('Error', 'Invalid coupon code');
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setDiscount(0);
-    setCouponCode('');
-  };
-
-  const handleOrderNow = () => {
-    if (!user?.$id) {
-      Alert.alert('Error', 'Please sign in to place an order');
-      return;
-    }
-
-    if (totalItems === 0) {
-      Alert.alert('Error', 'Your cart is empty');
-      return;
-    }
-
-    // Navigate to checkout screen
     router.push('/checkout');
   };
 
-  const calculateTax = () => {
-    const subtotal = totalPrice - discount;
-    return subtotal * 0.1; // 10% tax
+  const handleIncreaseQty = (itemId: string, customizations: any[]) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    increaseQty(itemId, customizations);
   };
 
-  const calculateTotal = () => {
-    const subtotal = totalPrice - discount;
-    const taxAmount = calculateTax();
-    const finalDeliveryFee = discount >= deliveryFee ? 0 : deliveryFee;
-    return subtotal + taxAmount + finalDeliveryFee;
+  const handleDecreaseQty = (itemId: string, customizations: any[]) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    decreaseQty(itemId, customizations);
   };
 
-  const CartItemCard = ({ item }: { item: any }) => {
+  const handleRemoveItem = (itemId: string, customizations: any[]) => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    removeItem(itemId, customizations);
+  };
+
+  if (items.length === 0) {
     return (
-      <View style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: BorderRadius.lg,
-        padding: Spacing.md,
-        marginBottom: Spacing.md,
-        ...Shadows.sm,
-        borderWidth: 1,
-        borderColor: Colors.neutral[100],
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          {/* Image */}
-          <View style={{ width: 80, height: 80, borderRadius: BorderRadius.md, overflow: 'hidden', marginRight: Spacing.md }}>
-            <Image
-              source={getImageSource(item.image_url, item.name)}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-            />
-          </View>
-
-          {/* Content */}
-          <View style={{ flex: 1 }}>
-            <Text style={[Typography.h6, { color: Colors.neutral[900], marginBottom: Spacing.xs }]}>
-              {item.name}
-            </Text>
-            
-            {item.customizations && item.customizations.length > 0 && (
-              <Text style={[Typography.caption, { color: Colors.neutral[600], marginBottom: Spacing.xs }]}>
-                {item.customizations.map((custom: any, index: number) => custom.name).join(', ')}
-              </Text>
-            )}
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.sm }}>
-              <Text style={[Typography.h6, { color: RESTAURANT_CONFIG.primaryColor }]}>
-                €{(item.price * item.quantity).toFixed(2)}
-              </Text>
-
-              {/* Quantity Controls */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity
-                  onPress={() => decreaseQty(item.id, item.customizations)}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: BorderRadius.sm,
-                    backgroundColor: Colors.neutral[100],
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icons.Minus size={16} color={Colors.neutral[600]} />
-                </TouchableOpacity>
-
-                <Text style={[Typography.body1, { color: Colors.neutral[900], marginHorizontal: Spacing.md }]}>
-                  {item.quantity}
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => increaseQty(item.id, item.customizations)}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: BorderRadius.sm,
-                    backgroundColor: RESTAURANT_CONFIG.primaryColor,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icons.Plus size={16} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* Remove Button */}
-          <TouchableOpacity
-            onPress={() => removeItem(item.id, item.customizations)}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: BorderRadius.sm,
-              backgroundColor: Colors.error[50],
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: Spacing.sm,
-            }}
-          >
-            <Icons.Trash size={16} color={Colors.error[500]} />
-          </TouchableOpacity>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Your Cart</Text>
         </View>
-      </View>
-    );
-  };
 
-  if (totalItems === 0) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.neutral[50] }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg }}>
-          <Image source={images.emptyState} style={{ width: 200, height: 200, marginBottom: Spacing.lg }} />
-          <Text style={[Typography.h4, { color: Colors.neutral[900], marginBottom: Spacing.sm, textAlign: 'center' }]}>
-            Your cart is empty
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconContainer}>
+            <Icons.ShoppingCart size={64} color={Colors.neutral[300]} />
+          </View>
+          <Text style={styles.emptyTitle}>Your cart is empty</Text>
+          <Text style={styles.emptySubtitle}>
+            Add items from the menu to get started
           </Text>
-          <Text style={[Typography.body1, { color: Colors.neutral[600], textAlign: 'center', marginBottom: Spacing.xl }]}>
-            Add some delicious items from our menu to get started
-          </Text>
-          <UnifiedButton
-            title="Browse Menu"
+          <TouchableOpacity
             onPress={() => router.push('/(tabs)/index')}
-            variant="primary"
-            size="large"
-            fullWidth
-          />
+            style={styles.browseButton}
+          >
+            <Text style={styles.browseButtonText}>Browse Menu</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.neutral[50] }}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={{
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.neutral[200],
-      }}>
-        <Text style={[Typography.h3, { color: Colors.neutral[900] }]}>
-          Your Cart ({totalItems} items)
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Your Cart</Text>
+        <Text style={styles.headerSubtitle}>
+          {totalItems} item{totalItems !== 1 ? 's' : ''}
         </Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={{ padding: Spacing.lg }}>
-          {/* Cart Items */}
-          {items.map((item) => (
-            <CartItemCard key={(item as any).cartId || item.id} item={item} />
-          ))}
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Cart Items */}
+        <View style={styles.itemsSection}>
+          {items.map((item, index) => (
+            <AnimatedListItem
+              key={(item as any).cartId || item.id}
+              index={index}
+              staggerDelay={50}
+            >
+              <View style={styles.cartItem}>
+                {/* Item Image */}
+                <View style={styles.itemImageContainer}>
+                  <Image
+                    source={getImageSource(item.image_url, item.name)}
+                    style={styles.itemImage}
+                    resizeMode="cover"
+                  />
+                </View>
 
-          {/* Add More Items */}
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/index')}
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: BorderRadius.lg,
-              padding: Spacing.md,
-              marginBottom: Spacing.lg,
-              borderWidth: 2,
-              borderColor: RESTAURANT_CONFIG.primaryColor,
-              borderStyle: 'dashed',
-              alignItems: 'center',
-            }}
-          >
-            <Icons.Plus size={24} color={RESTAURANT_CONFIG.primaryColor} />
-            <Text style={[Typography.button, { color: RESTAURANT_CONFIG.primaryColor, marginTop: Spacing.sm }]}>
-              Add more items
-            </Text>
-          </TouchableOpacity>
+                {/* Item Info */}
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
 
-          {/* Coupon Section */}
-          <View style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: BorderRadius.lg,
-            padding: Spacing.md,
-            marginBottom: Spacing.lg,
-            ...Shadows.sm,
-          }}>
-            <Text style={[Typography.h6, { color: Colors.neutral[900], marginBottom: Spacing.sm }]}>
-              Promo Code
-            </Text>
-            
-            {appliedCoupon ? (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: Colors.success[50],
-                borderRadius: BorderRadius.md,
-                padding: Spacing.sm,
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Icons.Check size={16} color={Colors.success[600]} />
-                  <Text style={[Typography.body2, { color: Colors.success[700], marginLeft: Spacing.xs }]}>
-                    {appliedCoupon.code} applied
+                  {item.customizations && item.customizations.length > 0 && (
+                    <Text style={styles.customizations} numberOfLines={2}>
+                      {item.customizations.map((c: any) => c.name).join(', ')}
+                    </Text>
+                  )}
+
+                  <Text style={styles.itemPrice}>
+                    ${(item.price * item.quantity).toFixed(2)}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={handleRemoveCoupon}>
-                  <Text style={[Typography.label, { color: Colors.error[600] }]}>
-                    Remove
-                  </Text>
-                </TouchableOpacity>
+
+                {/* Quantity Controls */}
+                <View style={styles.quantityControls}>
+                  <TouchableOpacity
+                    onPress={() => handleDecreaseQty(item.id, item.customizations)}
+                    style={styles.quantityButton}
+                  >
+                    {item.quantity === 1 ? (
+                      <Icons.Trash size={16} color={Colors.neutral[600]} />
+                    ) : (
+                      <Icons.Minus size={16} color={Colors.neutral[900]} />
+                    )}
+                  </TouchableOpacity>
+
+                  <Text style={styles.quantityText}>{item.quantity}</Text>
+
+                  <TouchableOpacity
+                    onPress={() => handleIncreaseQty(item.id, item.customizations)}
+                    style={styles.quantityButton}
+                  >
+                    <Icons.Plus size={16} color={Colors.neutral[900]} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TextInput
-                  style={[
-                    Typography.body1,
-                    {
-                      flex: 1,
-                      backgroundColor: Colors.neutral[50],
-                      borderRadius: BorderRadius.md,
-                      paddingHorizontal: Spacing.md,
-                      paddingVertical: Spacing.sm,
-                      marginRight: Spacing.sm,
-                    }
-                  ]}
-                  placeholder="Enter promo code"
-                  value={couponCode}
-                  onChangeText={setCouponCode}
-                />
-                <UnifiedButton
-                  title="Apply"
-                  onPress={handleApplyCoupon}
-                  variant="primary"
-                  size="small"
-                />
+            </AnimatedListItem>
+          ))}
+        </View>
+
+        {/* Add More Items */}
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/index')}
+          style={styles.addMoreButton}
+        >
+          <Icons.Plus size={20} color={Colors.primary[600]} />
+          <Text style={styles.addMoreText}>Add more items</Text>
+        </TouchableOpacity>
+
+        {/* Coupon Code */}
+        <View style={styles.couponSection}>
+          <Text style={styles.sectionTitle}>Coupon Code</Text>
+          <View style={styles.couponInputContainer}>
+            <TextInput
+              style={styles.couponInput}
+              placeholder="Enter coupon code"
+              placeholderTextColor={Colors.neutral[400]}
+              value={couponCode}
+              onChangeText={setCouponCode}
+            />
+            <TouchableOpacity style={styles.applyButton}>
+              <Text style={styles.applyButtonText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Order Summary */}
+        <View style={styles.summarySection}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryValue}>${totalPrice.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Delivery Fee</Text>
+              <Text style={styles.summaryValue}>${deliveryFee.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Tax (10%)</Text>
+              <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
+            </View>
+
+            {discount > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryLabel, { color: Colors.success[600] }]}>
+                  Discount
+                </Text>
+                <Text style={[styles.summaryValue, { color: Colors.success[600] }]}>
+                  -${discount.toFixed(2)}
+                </Text>
               </View>
             )}
-          </View>
 
-          {/* Order Summary */}
-          <View style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: BorderRadius.lg,
-            padding: Spacing.lg,
-            ...Shadows.sm,
-          }}>
-            <Text style={[Typography.h5, { color: Colors.neutral[900], marginBottom: Spacing.md }]}>
-              Order Summary
-            </Text>
+            <View style={styles.divider} />
 
-            <View style={{ marginBottom: Spacing.md }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                <Text style={[Typography.body2, { color: Colors.neutral[600] }]}>
-                  Subtotal
-                </Text>
-                <Text style={[Typography.body2, { color: Colors.neutral[900] }]}>
-                  €{totalPrice.toFixed(2)}
-                </Text>
-              </View>
-
-              {discount > 0 && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                  <Text style={[Typography.body2, { color: Colors.success[600] }]}>
-                    Discount
-                  </Text>
-                  <Text style={[Typography.body2, { color: Colors.success[600] }]}>
-                    -€{discount.toFixed(2)}
-                  </Text>
-                </View>
-              )}
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                <Text style={[Typography.body2, { color: Colors.neutral[600] }]}>
-                  Tax
-                </Text>
-                <Text style={[Typography.body2, { color: Colors.neutral[900] }]}>
-                  €{calculateTax().toFixed(2)}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md }}>
-                <Text style={[Typography.body2, { color: Colors.neutral[600] }]}>
-                  Delivery Fee
-                </Text>
-                <Text style={[Typography.body2, { color: Colors.neutral[900] }]}>
-                  €{(discount >= deliveryFee ? 0 : deliveryFee).toFixed(2)}
-                </Text>
-              </View>
-
-              <View style={{ height: 1, backgroundColor: Colors.neutral[200], marginBottom: Spacing.md }} />
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={[Typography.h5, { color: Colors.neutral[900] }]}>
-                  Total
-                </Text>
-                <Text style={[Typography.h5, { color: RESTAURANT_CONFIG.primaryColor }]}>
-                  €{calculateTotal().toFixed(2)}
-                </Text>
-              </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>${finalTotal.toFixed(2)}</Text>
             </View>
           </View>
         </View>
+
+        {/* Bottom Spacing */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Bottom Action */}
-      <View style={{
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
-        borderTopWidth: 1,
-        borderTopColor: Colors.neutral[200],
-        ...Shadows.lg,
-      }}>
-        <UnifiedButton
-          title={`Proceed to Checkout (€${calculateTotal().toFixed(2)})`}
-          onPress={handleOrderNow}
-          variant="primary"
-          size="large"
-          fullWidth
-        />
+      {/* Checkout Button */}
+      <View style={styles.checkoutContainer}>
+        <View style={styles.totalContainer}>
+          <Text style={styles.checkoutLabel}>Total</Text>
+          <Text style={styles.checkoutTotal}>${finalTotal.toFixed(2)}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={handleCheckout}
+          style={styles.checkoutButton}
+        >
+          <Text style={styles.checkoutButtonText}>Checkout</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAF9F6',
+  },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: '#FAF9F6',
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontWeight: '400',
+    color: Colors.neutral[900],
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: Colors.neutral[600],
+  },
+  scrollView: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontWeight: '400',
+    color: Colors.neutral[900],
+    marginBottom: Spacing.xs,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: Colors.neutral[600],
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+  },
+  browseButton: {
+    backgroundColor: '#FF9F66',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  browseButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  itemsSection: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+  },
+  cartItem: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
+  },
+  itemImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: Colors.neutral[100],
+    marginRight: Spacing.md,
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
+  },
+  itemInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.neutral[900],
+    marginBottom: 4,
+  },
+  customizations: {
+    fontSize: 12,
+    color: Colors.neutral[600],
+    marginBottom: 8,
+  },
+  itemPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF9F66',
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral[100],
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    alignSelf: 'center',
+    gap: 12,
+  },
+  quantityButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.neutral[900],
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  addMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: Colors.primary[200],
+    borderStyle: 'dashed',
+    gap: 8,
+    marginBottom: Spacing.lg,
+  },
+  addMoreText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.primary[600],
+  },
+  couponSection: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontWeight: '400',
+    color: Colors.neutral[900],
+    marginBottom: Spacing.md,
+  },
+  couponInputContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  couponInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: Colors.neutral[900],
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+  },
+  applyButton: {
+    backgroundColor: '#FF9F66',
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  summarySection: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: Spacing.lg,
+    ...Shadows.sm,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: Colors.neutral[600],
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.neutral[900],
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.neutral[200],
+    marginVertical: Spacing.md,
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.neutral[900],
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FF9F66',
+  },
+  checkoutContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? 32 : Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...Shadows.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[200],
+  },
+  totalContainer: {
+    marginRight: Spacing.md,
+  },
+  checkoutLabel: {
+    fontSize: 12,
+    color: Colors.neutral[600],
+    marginBottom: 2,
+  },
+  checkoutTotal: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+  },
+  checkoutButton: {
+    flex: 1,
+    backgroundColor: '#FF9F66',
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkoutButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+});
 
 export default CartScreen;

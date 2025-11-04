@@ -370,17 +370,10 @@ export const useAnalytics = () => {
   };
 };
 
-// Screen tracking decorator
-export const withAnalytics = (WrappedComponent: React.ComponentType<any>, screenName: string) => {
-  return (props: any) => {
-    const analytics = AnalyticsManager.getInstance();
-    
-    React.useEffect(() => {
-      analytics.trackScreenView(screenName);
-    }, []);
-    
-    return <WrappedComponent {...props} />;
-  };
+// Screen tracking utility function
+export const trackScreenView = (screenName: string) => {
+  const analytics = AnalyticsManager.getInstance();
+  analytics.trackScreenView(screenName);
 };
 
 export default AnalyticsManager;

@@ -1,245 +1,244 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  SafeAreaView,
   StyleSheet,
-  Dimensions,
-  Platform,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import * as Location from 'expo-location';
-import { Icons } from '@/lib/icons';
-import { useTheme } from '@/lib/theme';
-import { ProfessionalText } from '@/components';
-
-const { width, height } = Dimensions.get('window');
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../lib/designSystem';
+import { Icons, IconSizes, IconColors } from '../lib/iconSystem';
+import { 
+  getOrderTracking, 
+  subscribeToOrderUpdates, 
+  getOrderTimeline,
+  formatOrderStatus,
+  getEstimatedDeliveryTime,
+  OrderTrackingData,
+  OrderUpdate
+} from '../lib/orderTracking';
 
 interface OrderTrackingMapProps {
   orderId: string;
-  restaurantLocation: {
-    latitude: number;
-    longitude: number;
-    name: string;
-  };
-  deliveryPersonLocation?: {
-    latitude: number;
-    longitude: number;
-    name: string;
-  };
-  customerLocation?: {
-    latitude: number;
-    longitude: number;
-  };
-  orderStatus: 'preparing' | 'out_for_delivery' | 'delivered';
+  onClose?: () => void;
 }
 
-const OrderTrackingMap: React.FC<OrderTrackingMapProps> = ({
-  orderId,
-  restaurantLocation,
-  deliveryPersonLocation,
-  customerLocation,
-  orderStatus,
-}) => {
-  const { colors } = useTheme();
-  const [region, setRegion] = useState({
-    latitude: restaurantLocation.latitude,
-    longitude: restaurantLocation.longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  });
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const isMountedRef = useRef(true);
+const OrderTrackingMap: React.FC<OrderTrackingMapProps> = ({ orderId, onClose }) => {
+  const [trackingData, setTrackingData] = useState<OrderTrackingData | null>(null);
+  const [timeline, setTimeline] = useState<OrderUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    getCurrentLocation();
-    
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    loadOrderTracking();
+    setupRealtimeUpdates();
+  }, [orderId]);
 
-  const getCurrentLocation = async () => {
+  const loadOrderTracking = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      if (!isMountedRef.current) return;
-
-      setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    } catch (error) {
-      console.error('Error getting location:', error);
+      setLoading(true);
+      setError(null);
+      
+      const data = await getOrderTracking(orderId);
+      if (data) {
+        setTrackingData(data);
+        
+        // Load timeline
+        const timelineData = await getOrderTimeline(orderId);
+        setTimeline(timelineData);
+      } else {
+        setError('Order not found');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load order tracking');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getMapRegion = () => {
-    const locations = [
-      restaurantLocation,
-      deliveryPersonLocation,
-      customerLocation,
-      userLocation,
-    ].filter(Boolean);
+  const setupRealtimeUpdates = () => {
+    const unsubscribe = subscribeToOrderUpdates(
+      orderId,
+      (update: OrderUpdate) => {
+        console.log('📡 Real-time update received:', update);
+        setTimeline(prev => [...prev, update]);
+      },
+      (status: string) => {
+        console.log('📡 Status change received:', status);
+        setTrackingData(prev => prev ? { ...prev, status } : null);
+      }
+    );
 
-    if (locations.length === 0) return region;
-
-    const latitudes = locations.map(loc => loc!.latitude);
-    const longitudes = locations.map(loc => loc!.longitude);
-
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLng = (minLng + maxLng) / 2;
-    const deltaLat = Math.max(maxLat - minLat, 0.01) * 1.2;
-    const deltaLng = Math.max(maxLng - minLng, 0.01) * 1.2;
-
-    return {
-      latitude: centerLat,
-      longitude: centerLng,
-      latitudeDelta: deltaLat,
-      longitudeDelta: deltaLng,
-    };
+    return unsubscribe;
   };
 
-  const getRouteCoordinates = () => {
-    const coordinates = [restaurantLocation];
+  const getStatusProgress = (status: string): number => {
+    const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
+    const currentIndex = statusOrder.indexOf(status);
+    return currentIndex >= 0 ? (currentIndex + 1) / statusOrder.length : 0;
+  };
+
+  const getEstimatedTime = (): string => {
+    if (!trackingData) return '';
     
-    if (deliveryPersonLocation) {
-      coordinates.push(deliveryPersonLocation);
-    }
+    const estimatedMinutes = getEstimatedDeliveryTime(trackingData.status, trackingData.orderId);
+    if (estimatedMinutes <= 0) return 'Delivered';
     
-    if (customerLocation) {
-      coordinates.push(customerLocation);
+    if (estimatedMinutes < 60) {
+      return `${estimatedMinutes} minutes`;
+    } else {
+      const hours = Math.floor(estimatedMinutes / 60);
+      const minutes = estimatedMinutes % 60;
+      return `${hours}h ${minutes}m`;
     }
-
-    return coordinates;
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: Colors.neutral[50] }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: Colors.neutral[900] }]}>Order Tracking</Text>
+          {onClose && (
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icons.X size={IconSizes.lg} color={IconColors.gray600} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary[500]} />
+          <Text style={[styles.loadingText, { color: Colors.neutral[900] }]}>Loading order details...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error || !trackingData) {
+    return (
+      <View style={[styles.container, { backgroundColor: Colors.neutral[50] }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: Colors.neutral[900] }]}>Order Tracking</Text>
+          {onClose && (
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icons.X size={IconSizes.lg} color={IconColors.gray600} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.errorContainer}>
+          <Icons.AlertCircle size={IconSizes.xl} color={IconColors.error} />
+          <Text style={[styles.errorText, { color: Colors.neutral[900] }]}>
+            {error || 'Order not found'}
+          </Text>
+          <TouchableOpacity onPress={loadOrderTracking} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const statusInfo = formatOrderStatus(trackingData.status);
+  const progress = getStatusProgress(trackingData.status);
 
   return (
-    <View style={styles.container}>
-      {Platform.OS === 'web' ? (
-        <View style={styles.mapPlaceholder}>
-          <View style={styles.mapContent}>
-            <Icons.Location size={48} color={colors.primary[500]} />
-            <ProfessionalText variant="h4" color={colors.neutral[900]} style={{ marginTop: 16, marginBottom: 8 }}>
-              Live Order Tracking
-            </ProfessionalText>
-            <ProfessionalText variant="body2" color={colors.neutral[600]} style={{ textAlign: 'center', marginBottom: 16 }}>
-              Real-time delivery tracking for order #{orderId.slice(-6)}
-            </ProfessionalText>
-            
-            <View style={styles.trackingInfo}>
-              <View style={styles.locationItem}>
-                <View style={[styles.locationDot, { backgroundColor: '#EF4444' }]} />
-                <ProfessionalText variant="body2" color={colors.neutral[700]}>
-                  🏪 {restaurantLocation.name}
-                </ProfessionalText>
-              </View>
-              
-              {deliveryPersonLocation && (
-                <View style={styles.locationItem}>
-                  <View style={[styles.locationDot, { backgroundColor: '#3B82F6' }]} />
-                  <ProfessionalText variant="body2" color={colors.neutral[700]}>
-                    🚚 {deliveryPersonLocation.name}
-                  </ProfessionalText>
-                </View>
-              )}
-              
-              {customerLocation && (
-                <View style={styles.locationItem}>
-                  <View style={[styles.locationDot, { backgroundColor: '#10B981' }]} />
-                  <ProfessionalText variant="body2" color={colors.neutral[700]}>
-                    🏠 Your Location
-                  </ProfessionalText>
-                </View>
-              )}
-            </View>
-            
-            {orderStatus === 'out_for_delivery' && (
-              <View style={styles.deliveryStatus}>
-                <ProfessionalText variant="body2" color={colors.primary[600]}>
-                  🚚 Out for delivery - Driver is on the way!
-                </ProfessionalText>
-              </View>
-            )}
-          </View>
-        </View>
-      ) : (
-        <View style={styles.mapPlaceholder}>
-          <ProfessionalText variant="body1" color={colors.neutral[600]}>
-            Map functionality requires native build
-          </ProfessionalText>
-        </View>
-      )}
-
-      {/* Status Overlay */}
-      <View style={styles.statusOverlay}>
-        <View style={styles.statusCard}>
-          <View style={styles.statusHeader}>
-            <Icons.Clock size={20} color={colors.primary[500]} />
-            <ProfessionalText variant="body1" color={colors.neutral[900]} style={{ marginLeft: 8 }}>
-              Order Status
-            </ProfessionalText>
-          </View>
-          
-          <ProfessionalText variant="h4" color={colors.neutral[900]} style={{ marginTop: 8 }}>
-            Order #{orderId.slice(-6)}
-          </ProfessionalText>
-          
-          <View style={styles.statusInfo}>
-            <ProfessionalText variant="body2" color={colors.neutral[600]}>
-              {orderStatus === 'preparing' && '🍳 Preparing your order'}
-              {orderStatus === 'out_for_delivery' && '🚚 Out for delivery'}
-              {orderStatus === 'delivered' && '✅ Delivered'}
-            </ProfessionalText>
-            
-            {deliveryPersonLocation && (
-              <ProfessionalText variant="body2" color={colors.neutral[500]} style={{ marginTop: 4 }}>
-                Delivery person is on the way
-              </ProfessionalText>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-          <ProfessionalText variant="caption" color={colors.neutral[600]}>
-            Restaurant
-          </ProfessionalText>
-        </View>
-        
-        {deliveryPersonLocation && (
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} />
-            <ProfessionalText variant="caption" color={colors.neutral[600]}>
-              Delivery Person
-            </ProfessionalText>
-          </View>
+    <View style={[styles.container, { backgroundColor: Colors.neutral[50] }]}>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: Colors.neutral[900] }]}>Order Tracking</Text>
+        {onClose && (
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Icons.X size={IconSizes.lg} color={IconColors.gray600} />
+          </TouchableOpacity>
         )}
-        
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
-          <ProfessionalText variant="caption" color={colors.neutral[600]}>
-            Your Location
-          </ProfessionalText>
-        </View>
       </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Order Status Card */}
+        <View style={[styles.statusCard, { backgroundColor: Colors.neutral[100] }]}>
+          <View style={styles.statusHeader}>
+            <View style={[styles.statusIcon, { backgroundColor: statusInfo.color + '20' }]}>
+              <Icons.CheckCircle size={IconSizes.xl} color={statusInfo.color} />
+            </View>
+            <View style={styles.statusInfo}>
+              <Text style={[styles.statusLabel, { color: Colors.neutral[900] }]}>
+                {statusInfo.label}
+              </Text>
+              <Text style={[styles.statusDescription, { color: Colors.neutral[600] }]}>
+                {statusInfo.description}
+              </Text>
+            </View>
+          </View>
+
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { backgroundColor: Colors.neutral[200] }]}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { 
+                    backgroundColor: statusInfo.color,
+                    width: `${progress * 100}%` 
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={[styles.progressText, { color: Colors.neutral[600] }]}>
+              {Math.round(progress * 100)}% Complete
+            </Text>
+          </View>
+
+          {/* Estimated Time */}
+          {trackingData.status !== 'delivered' && trackingData.status !== 'cancelled' && (
+            <View style={styles.estimatedTime}>
+              <Icons.Clock size={IconSizes.md} color={IconColors.primary} />
+              <Text style={[styles.estimatedTimeText, { color: Colors.neutral[900] }]}>
+                Estimated delivery: {getEstimatedTime()}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Restaurant Info */}
+        <View style={[styles.restaurantCard, { backgroundColor: Colors.neutral[100] }]}>
+          <Text style={[styles.cardTitle, { color: Colors.neutral[900] }]}>Restaurant Info</Text>
+          <View style={styles.restaurantInfo}>
+            <View style={styles.restaurantItem}>
+              <Icons.MapPin size={IconSizes.md} color={IconColors.primary} />
+              <Text style={[styles.restaurantText, { color: Colors.neutral[900] }]}>
+                {trackingData.restaurantInfo.name}
+              </Text>
+            </View>
+            <View style={styles.restaurantItem}>
+              <Icons.Phone size={IconSizes.md} color={IconColors.primary} />
+              <Text style={[styles.restaurantText, { color: Colors.neutral[900] }]}>
+                {trackingData.restaurantInfo.phone}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Order Timeline */}
+        <View style={[styles.timelineCard, { backgroundColor: Colors.neutral[100] }]}>
+          <Text style={[styles.cardTitle, { color: Colors.neutral[900] }]}>Order Timeline</Text>
+          <View style={styles.timeline}>
+            {timeline.map((update, index) => (
+              <View key={update.id} style={styles.timelineItem}>
+                <View style={styles.timelineDot}>
+                  <View style={[styles.timelineDotInner, { backgroundColor: statusInfo.color }]} />
+                </View>
+                <View style={styles.timelineContent}>
+                  <Text style={[styles.timelineMessage, { color: Colors.neutral[900] }]}>
+                    {update.message}
+                  </Text>
+                  <Text style={[styles.timelineTime, { color: Colors.neutral[600] }]}>
+                    {new Date(update.timestamp).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -248,92 +247,173 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  mapPlaceholder: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  title: {
+    ...Typography.h2,
+    fontWeight: '600',
+  },
+  closeButton: {
+    padding: Spacing.sm,
+  },
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
   },
-  mapContent: {
+  loadingText: {
+    ...Typography.body1,
+    marginTop: Spacing.md,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: Spacing.lg,
   },
-  trackingInfo: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  errorText: {
+    ...Typography.body1,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
   },
-  locationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+  retryButton: {
+    backgroundColor: Colors.primary[500],
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
   },
-  locationDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
+  retryButtonText: {
+    ...Typography.button,
+    color: '#FFFFFF',
   },
-  deliveryStatus: {
-    backgroundColor: '#EFF6FF',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    alignItems: 'center',
-  },
-  statusOverlay: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
+  content: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
   },
   statusCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: Spacing.lg,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
   },
   statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  statusIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
   },
   statusInfo: {
-    marginTop: 8,
+    flex: 1,
   },
-  legend: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  statusLabel: {
+    ...Typography.h3,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
   },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  statusDescription: {
+    ...Typography.body1,
   },
-  legendDot: {
-    width: 8,
+  progressContainer: {
+    marginBottom: Spacing.lg,
+  },
+  progressBar: {
     height: 8,
     borderRadius: 4,
-    marginRight: 8,
+    marginBottom: Spacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText: {
+    ...Typography.caption,
+    textAlign: 'right',
+  },
+  estimatedTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  estimatedTimeText: {
+    ...Typography.body1,
+    marginLeft: Spacing.sm,
+    fontWeight: '500',
+  },
+  restaurantCard: {
+    marginTop: Spacing.lg,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+  },
+  cardTitle: {
+    ...Typography.h3,
+    fontWeight: '600',
+    marginBottom: Spacing.md,
+  },
+  restaurantInfo: {
+    gap: Spacing.md,
+  },
+  restaurantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  restaurantText: {
+    ...Typography.body1,
+    marginLeft: Spacing.sm,
+  },
+  timelineCard: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
+  },
+  timeline: {
+    gap: Spacing.lg,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  timelineDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.neutral[200],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+    marginTop: 2,
+  },
+  timelineDotInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  timelineContent: {
+    flex: 1,
+  },
+  timelineMessage: {
+    ...Typography.body1,
+    marginBottom: Spacing.xs,
+  },
+  timelineTime: {
+    ...Typography.caption,
   },
 });
 

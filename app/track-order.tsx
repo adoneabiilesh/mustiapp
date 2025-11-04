@@ -1,241 +1,546 @@
-import {View, Text, Image, TouchableOpacity} from 'react-native'
-import {SafeAreaView} from "react-native-safe-area-context";
-import CustomHeader from "@/components/CustomHeader";
-import {useLocalSearchParams, router} from "expo-router";
-import {useEffect, useState} from "react";
-import {supabase} from "@/lib/supabase";
-import cn from "clsx";
-import {images} from "@/constants";
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
+// MapView import - optional if you haven't configured Google Maps API yet
+// import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Icons } from '@/lib/icons';
+import { useTheme } from '@/lib/theme';
+import { ProfessionalText } from '@/components/ProfessionalText';
+import { ProfessionalCard } from '@/components/ProfessionalCard';
+import { ProfessionalButton } from '@/components/ProfessionalButton';
+import { supabase } from '@/lib/supabase';
+import useAuthStore from '@/store/auth.store';
 
-interface Order {
-  id: string;
-  status: string;
-  total: number;
-  created_at: string;
-  delivery_address: any;
-  order_items: any[];
-}
+const STATUS_STEPS = [
+  { key: 'confirmed', label: 'Confirmed', icon: 'CheckCircle' },
+  { key: 'preparing', label: 'Preparing', icon: 'Clock' },
+  { key: 'picked_up', label: 'Picked Up', icon: 'Package' },
+  { key: 'on_the_way', label: 'On the Way', icon: 'Truck' },
+  { key: 'delivered', label: 'Delivered', icon: 'Check' },
+];
 
-const StatusStep = ({ 
-  title, 
-  description, 
-  isActive, 
-  isCompleted, 
-  icon 
-}: {
-  title: string;
-  description: string;
-  isActive: boolean;
-  isCompleted: boolean;
-  icon: any;
-}) => (
-  <View className="flex-row items-start mb-6">
-    <View className={cn(
-      "size-12 rounded-full flex-center mr-4",
-      isCompleted ? "bg-success-500" : isActive ? "bg-primary-500" : "bg-gray-300"
-    )}>
-      <Image 
-        source={icon} 
-        className="size-6" 
-        tintColor={isCompleted || isActive ? "white" : "#9CA3AF"} 
-      />
-    </View>
-    <View className="flex-1">
-      <Text className={cn(
-        "paragraph-bold mb-1",
-        isActive ? "text-primary-600" : isCompleted ? "text-success-600" : "text-gray-500"
-      )}>
-        {title}
-      </Text>
-      <Text className="body-regular text-gray-600">{description}</Text>
-    </View>
-  </View>
-);
-
-const TrackOrder = () => {
+export default function TrackOrderScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
+  const { colors, spacing } = useTheme();
+  const { user } = useAuthStore();
+  // const mapRef = useRef<MapView>(null); // Uncomment when you add maps
+  
+  const [order, setOrder] = useState<any>(null);
+  const [tracking, setTracking] = useState<any>(null);
+  const [driver, setDriver] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'map' | 'chat'>('map');
 
-  const fetchOrder = async () => {
-    if (!orderId) return;
+  useEffect(() => {
+    fetchOrderDetails();
+    subscribeToUpdates();
+    
+    return () => {
+      // Cleanup subscriptions
+    };
+  }, [orderId]);
 
+  const fetchOrderDetails = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+
+      // Fetch order with tracking info
+      const { data: orderData } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (*)
-        `)
+        .select('*, delivery_tracking(*), drivers(*)')
         .eq('id', orderId)
         .single();
 
-      if (error) throw error;
-      setOrder(data);
+      setOrder(orderData);
+      setTracking(orderData?.delivery_tracking?.[0]);
+      setDriver(orderData?.drivers?.[0]);
+
+      // Fetch chat messages
+      const { data: chatData } = await supabase
+        .from('order_chat')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+
+      setMessages(chatData || []);
+
+      // Mark messages as read
+      if (chatData) {
+        await supabase
+          .from('order_chat')
+          .update({ read: true })
+          .eq('order_id', orderId)
+          .neq('sender_id', user?.id);
+      }
     } catch (error) {
-      console.log('Error fetching order:', error);
+      console.error('Error fetching order:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrder();
-  }, [orderId]);
-
-  useEffect(() => {
-    if (!orderId) return;
-
-    // Subscribe to real-time order updates
-    const channel = supabase
-      .channel(`order-${orderId}`)
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, 
+  const subscribeToUpdates = () => {
+    // Subscribe to delivery tracking changes
+    const trackingChannel = supabase
+      .channel(`delivery-tracking-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'delivery_tracking',
+          filter: `order_id=eq.${orderId}`,
+        },
         (payload) => {
-          console.log('🔄 Order updated:', payload.new);
-          setOrder(payload.new as Order);
+          setTracking(payload.new);
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
+    // Subscribe to chat messages
+    const chatChannel = supabase
+      .channel(`order-chat-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'order_chat',
+          filter: `order_id=eq.${orderId}`,
+        },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new]);
+          
+          // Mark as read if not from current user
+          if (payload.new.sender_id !== user?.id) {
+            supabase
+              .from('order_chat')
+              .update({ read: true })
+              .eq('id', payload.new.id)
+              .then();
+          }
+        }
+      )
+      .subscribe();
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !user) return;
+
+    try {
+      await supabase.from('order_chat').insert({
+        order_id: orderId,
+        sender_id: user.id,
+        message: newMessage.trim(),
+        message_type: 'text',
+      });
+
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const getCurrentStepIndex = () => {
+    const statusMap: any = {
+      confirmed: 0,
+      preparing: 1,
+      picked_up: 2,
+      on_the_way: 3,
+      delivered: 4,
     };
-  }, [orderId]);
+    return statusMap[tracking?.status] || 0;
+  };
 
-  const getStatusSteps = (status: string) => {
-    const steps = [
-      {
-        key: 'confirmed',
-        title: 'Order Confirmed',
-        description: 'Your order has been received and confirmed',
-        icon: images.check
-      },
-      {
-        key: 'preparing',
-        title: 'Preparing',
-        description: 'Our chefs are preparing your delicious meal',
-        icon: images.clock
-      },
-      {
-        key: 'out_for_delivery',
-        title: 'Out for Delivery',
-        description: 'Your order is on its way to you',
-        icon: images.location
-      },
-      {
-        key: 'delivered',
-        title: 'Delivered',
-        description: 'Enjoy your meal!',
-        icon: images.check
-      }
-    ];
+  const renderProgressBar = () => {
+    const currentIndex = getCurrentStepIndex();
 
-    return steps.map((step, index) => {
-      const stepIndex = steps.findIndex(s => s.key === status);
-      const isCompleted = index < stepIndex;
-      const isActive = index === stepIndex;
+    return (
+      <View style={{ padding: spacing.lg }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', position: 'relative' }}>
+          {/* Progress line */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 20,
+              left: 20,
+              right: 20,
+              height: 2,
+              backgroundColor: colors.border,
+            }}
+          >
+            <View
+              style={{
+                width: `${(currentIndex / (STATUS_STEPS.length - 1)) * 100}%`,
+                height: '100%',
+                backgroundColor: colors.primary,
+              }}
+            />
+          </View>
 
+          {STATUS_STEPS.map((step, index) => {
+            const isCompleted = index <= currentIndex;
+            const Icon = Icons[step.icon as keyof typeof Icons] as any;
+
+            return (
+              <View key={step.key} style={{ alignItems: 'center', flex: 1 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: isCompleted ? colors.primary : colors.border,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  <Icon size={20} color={isCompleted ? '#fff' : colors.textSecondary} />
+                </View>
+                <ProfessionalText
+                  size="xs"
+                  color={isCompleted ? 'primary' : 'secondary'}
+                  weight={isCompleted ? 'semibold' : 'normal'}
+                  style={{ textAlign: 'center' }}
+                >
+                  {step.label}
+                </ProfessionalText>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
+  const renderMapView = () => {
+    if (!tracking) {
       return (
-        <StatusStep
-          key={step.key}
-          title={step.title}
-          description={step.description}
-          isActive={isActive}
-          isCompleted={isCompleted}
-          icon={step.icon}
-        />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
+          <Icons.MapPin size={64} color={colors.border} />
+          <ProfessionalText weight="semibold" style={{ marginTop: spacing.lg, textAlign: 'center' }}>
+            Tracking not available yet
+          </ProfessionalText>
+          <ProfessionalText size="sm" color="secondary" style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+            Your order is being prepared. Live tracking will appear once it's out for delivery.
+          </ProfessionalText>
+        </View>
       );
-    });
+    }
+
+    // Show tracking info without map (map requires Google Maps API setup)
+    return (
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }}>
+        <ProfessionalCard style={{ marginBottom: spacing.md }}>
+          <View style={{ alignItems: 'center', padding: spacing.lg }}>
+            <View
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: colors.primary + '20',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: spacing.md,
+              }}
+            >
+              <Icons.Truck size={40} color={colors.primary} />
+            </View>
+            <ProfessionalText size="lg" weight="bold" style={{ marginBottom: spacing.sm }}>
+              {tracking.status === 'on_the_way' ? 'Driver is on the way!' : 'Order in Progress'}
+            </ProfessionalText>
+            {tracking.estimated_arrival && (
+              <ProfessionalText size="sm" color="secondary">
+                Estimated arrival: {new Date(tracking.estimated_arrival).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </ProfessionalText>
+            )}
+          </View>
+        </ProfessionalCard>
+
+        {tracking.distance_remaining && (
+          <ProfessionalCard style={{ marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Icons.MapPin size={24} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <ProfessionalText weight="semibold">Distance Remaining</ProfessionalText>
+                <ProfessionalText size="sm" color="secondary">
+                  {tracking.distance_remaining.toFixed(1)} km away
+                </ProfessionalText>
+              </View>
+            </View>
+          </ProfessionalCard>
+        )}
+
+        <ProfessionalCard>
+          <View style={{ padding: spacing.md }}>
+            <ProfessionalText weight="semibold" style={{ marginBottom: spacing.md }}>
+              Delivery Status
+            </ProfessionalText>
+            <View style={{ gap: spacing.sm }}>
+              {tracking.pickup_time && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <ProfessionalText size="sm" color="secondary">
+                    Picked up
+                  </ProfessionalText>
+                  <ProfessionalText size="sm">
+                    {new Date(tracking.pickup_time).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </ProfessionalText>
+                </View>
+              )}
+              {tracking.delivery_time && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <ProfessionalText size="sm" color="secondary">
+                    Delivered
+                  </ProfessionalText>
+                  <ProfessionalText size="sm">
+                    {new Date(tracking.delivery_time).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </ProfessionalText>
+                </View>
+              )}
+            </View>
+          </View>
+        </ProfessionalCard>
+
+        <View style={{ marginTop: spacing.lg, padding: spacing.md, backgroundColor: colors.card, borderRadius: 12 }}>
+          <ProfessionalText size="xs" color="secondary" style={{ textAlign: 'center' }}>
+            💡 Tip: Enable location tracking for real-time map view
+          </ProfessionalText>
+        </View>
+      </ScrollView>
+    );
+  };
+
+  const renderChat = () => {
+    return (
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}
+          renderItem={({ item }) => {
+            const isMyMessage = item.sender_id === user?.id;
+            return (
+              <View
+                style={{
+                  marginBottom: spacing.md,
+                  alignItems: isMyMessage ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <View
+                  style={{
+                    maxWidth: '75%',
+                    padding: spacing.md,
+                    borderRadius: 16,
+                    backgroundColor: isMyMessage ? colors.primary : colors.card,
+                  }}
+                >
+                  <ProfessionalText style={{ color: isMyMessage ? '#fff' : colors.text }}>
+                    {item.message}
+                  </ProfessionalText>
+                  <ProfessionalText
+                    size="xs"
+                    style={{
+                      color: isMyMessage ? 'rgba(255,255,255,0.7)' : colors.textSecondary,
+                      marginTop: 4,
+                    }}
+                  >
+                    {new Date(item.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </ProfessionalText>
+                </View>
+              </View>
+            );
+          }}
+        />
+
+        {/* Input Area */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={100}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: colors.card,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            padding: spacing.md,
+          }}
+        >
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <TextInput
+              style={{
+                flex: 1,
+                height: 44,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 22,
+                paddingHorizontal: spacing.md,
+                fontSize: 16,
+                color: colors.text,
+              }}
+              placeholder="Type a message..."
+              placeholderTextColor={colors.textSecondary}
+              value={newMessage}
+              onChangeText={setNewMessage}
+            />
+            <TouchableOpacity
+              onPress={sendMessage}
+              disabled={!newMessage.trim()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: newMessage.trim() ? colors.primary : colors.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icons.Send size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    );
   };
 
   if (loading) {
     return (
-      <SafeAreaView className="bg-gray-50 h-full">
-        <CustomHeader title="Track Order" />
-        <View className="flex-center py-20">
-          <Text className="paragraph-medium text-gray-600">Loading order details...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!order) {
-    return (
-      <SafeAreaView className="bg-gray-50 h-full">
-        <CustomHeader title="Track Order" />
-        <View className="flex-center py-20 px-5">
-          <Image source={images.emptyState} className="size-32 mb-6" />
-          <Text className="h3-bold text-dark-900 mb-2">Order Not Found</Text>
-          <Text className="paragraph-regular text-gray-600 text-center mb-6">
-            We couldn't find the order you're looking for
-          </Text>
-          <TouchableOpacity 
-            className="custom-btn"
-            onPress={() => router.back()}
-          >
-            <Text className="paragraph-bold text-white">Go Back</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="bg-gray-50 h-full">
-      <CustomHeader title="Track Order" />
-      
-      <View className="px-5 pb-32">
-        {/* Order Info */}
-        <View className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100 mb-6">
-          <View className="flex-between mb-4">
-            <Text className="h3-bold text-dark-900">Order #{order.id.slice(-6)}</Text>
-            <View className={cn(
-              "status-badge",
-              order.status === 'confirmed' ? 'status-confirmed' :
-              order.status === 'preparing' ? 'status-preparing' :
-              order.status === 'out_for_delivery' ? 'status-out-for-delivery' :
-              order.status === 'delivered' ? 'status-delivered' : 'status-pending'
-            )}>
-              <Text className="small-bold">
-                {order.status.replace('_', ' ').toUpperCase()}
-              </Text>
-            </View>
-          </View>
-          
-          <Text className="paragraph-medium text-gray-600 mb-2">
-            Ordered on {new Date(order.created_at).toLocaleDateString()}
-          </Text>
-          <Text className="paragraph-bold text-dark-900">
-            Total: ${order.total.toFixed(2)}
-          </Text>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Header */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: spacing.lg,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+        }}
+      >
+        <TouchableOpacity onPress={() => router.back()}>
+          <Icons.ArrowLeft size={24} color={colors.text} />
+        </TouchableOpacity>
+        <ProfessionalText size="lg" weight="bold">
+          Track Order
+        </ProfessionalText>
+        <View style={{ width: 24 }} />
+      </View>
 
-        {/* Status Steps */}
-        <View className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100">
-          <Text className="h4-bold text-dark-900 mb-6">Order Status</Text>
-          {getStatusSteps(order.status)}
-        </View>
+      {/* Progress Bar */}
+      {renderProgressBar()}
 
-        {/* Estimated Time */}
-        <View className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl p-6 mt-6">
-          <View className="flex-row items-center">
-            <Image source={images.clock} className="size-8 mr-4" tintColor="white" />
-            <View>
-              <Text className="paragraph-bold text-white">Estimated Delivery</Text>
-              <Text className="h3-bold text-white">
-                {order.status === 'delivered' ? 'Delivered' : 
-                 order.status === 'out_for_delivery' ? '15-20 mins' :
-                 order.status === 'preparing' ? '25-30 mins' : '30-35 mins'}
-              </Text>
+      {/* Driver Info */}
+      {driver && (
+        <ProfessionalCard style={{ margin: spacing.lg, marginTop: 0 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 25,
+                backgroundColor: colors.primary + '20',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icons.User size={24} color={colors.primary} />
             </View>
+            <View style={{ flex: 1 }}>
+              <ProfessionalText weight="bold">Driver Assigned</ProfessionalText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Icons.Star size={14} color={colors.warning} fill={colors.warning} />
+                <ProfessionalText size="sm" color="secondary">
+                  {driver.rating?.toFixed(1)} • {driver.total_deliveries} deliveries
+                </ProfessionalText>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.primary + '20',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icons.Phone size={20} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-        </View>
+        </ProfessionalCard>
+      )}
+
+      {/* Tab Switcher */}
+      <View style={{ flexDirection: 'row', padding: spacing.md, gap: spacing.sm }}>
+        <TouchableOpacity
+          onPress={() => setActiveTab('map')}
+          style={{
+            flex: 1,
+            paddingVertical: spacing.md,
+            borderRadius: 12,
+            backgroundColor: activeTab === 'map' ? colors.primary : colors.card,
+            alignItems: 'center',
+          }}
+        >
+          <ProfessionalText weight="semibold" style={{ color: activeTab === 'map' ? '#fff' : colors.text }}>
+            Map View
+          </ProfessionalText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setActiveTab('chat')}
+          style={{
+            flex: 1,
+            paddingVertical: spacing.md,
+            borderRadius: 12,
+            backgroundColor: activeTab === 'chat' ? colors.primary : colors.card,
+            alignItems: 'center',
+          }}
+        >
+          <ProfessionalText weight="semibold" style={{ color: activeTab === 'chat' ? '#fff' : colors.text }}>
+            Chat
+          </ProfessionalText>
+        </TouchableOpacity>
+      </View>
+
+      {/* Content */}
+      <View style={{ flex: 1 }}>
+        {activeTab === 'map' ? renderMapView() : renderChat()}
       </View>
     </SafeAreaView>
   );
-};
-
-export default TrackOrder;
-
-
+}

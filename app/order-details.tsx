@@ -14,7 +14,7 @@ import { images } from '@/constants';
 import { useCartStore } from '../store/cart.store';
 import { getImageSource } from '../lib/imageUtils';
 import { supabase } from '../lib/supabase';
-import cn from 'clsx';
+import { cn } from '@/lib/utils';
 
 const OrderDetails = () => {
   const { orderId } = useLocalSearchParams();
@@ -69,7 +69,7 @@ const OrderDetails = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return 'text-green-600 bg-green-100';
-      case 'out_for_delivery': return 'text-blue-600 bg-blue-100';
+      case 'out_for_delivery': return 'text-red-600 bg-red-100';
       case 'preparing': return 'text-orange-600 bg-orange-100';
       case 'confirmed': return 'text-purple-600 bg-purple-100';
       case 'pending': return 'text-yellow-600 bg-yellow-100';
@@ -206,7 +206,7 @@ const OrderDetails = () => {
                 paddingVertical: 6,
                 borderRadius: 20,
                 backgroundColor: getStatusColor(order.status).includes('green') ? '#E8F5E8' : 
-                               getStatusColor(order.status).includes('blue') ? '#E3F2FD' :
+                               getStatusColor(order.status).includes('red') ? '#FEF2F2' :
                                getStatusColor(order.status).includes('orange') ? '#FFF3E0' :
                                getStatusColor(order.status).includes('purple') ? '#F3E5F5' :
                                getStatusColor(order.status).includes('yellow') ? '#FFFDE7' :
@@ -216,7 +216,7 @@ const OrderDetails = () => {
                   fontSize: 12,
                   fontWeight: '600',
                   color: getStatusColor(order.status).includes('green') ? '#2E7D32' :
-                         getStatusColor(order.status).includes('blue') ? '#1976D2' :
+                         getStatusColor(order.status).includes('red') ? '#E53E3E' :
                          getStatusColor(order.status).includes('orange') ? '#F57C00' :
                          getStatusColor(order.status).includes('purple') ? '#7B1FA2' :
                          getStatusColor(order.status).includes('yellow') ? '#F9A825' :

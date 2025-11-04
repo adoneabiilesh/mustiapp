@@ -137,7 +137,7 @@
     }
 
     .status-out-for-delivery {
-        @apply bg-blue-100 text-blue-800;
+        @apply bg-red-100 text-red-800;
     }
 
     .status-delivered {
@@ -436,7 +436,7 @@
     }
 
     .deliveroo-order-card-status-confirmed {
-        @apply bg-blue-100 text-blue-800;
+        @apply bg-red-100 text-red-800;
     }
 
     .deliveroo-order-card-status-preparing {

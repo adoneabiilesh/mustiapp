@@ -1,74 +1,94 @@
-import {SplashScreen, Stack} from "expo-router";
-import { useFonts } from 'expo-font';
-import { useEffect} from "react";
-import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
-
-import './globals.css';
+import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StripeProvider } from '@/lib/stripe';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import * as Sentry from '@sentry/react-native';
-import useAuthStore from "@/store/auth.store";
-import { ThemeProvider } from "@/lib/theme";
-import { AppInitializationProvider } from "@/lib/appInitialization";
+import { useEffect } from 'react';
 
-Sentry.init({
-  dsn: 'https://94edd17ee98a307f2d85d750574c454a@o4506876178464768.ingest.us.sentry.io/4509588544094208',
-
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-  sendDefaultPii: true,
-
-  // Configure Session Replay
-  replaysSessionSampleRate: 1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
-
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
-});
-
-export default Sentry.wrap(function RootLayout() {
-  const { isLoading, fetchAuthenticatedUser } = useAuthStore();
-
-  const [fontsLoaded, error] = useFonts({
-    // Existing Fonts (for backward compatibility)
-    "Quicksand-Bold": require('../assets/fonts/Quicksand-Bold.ttf'),
-    "Quicksand-Medium": require('../assets/fonts/Quicksand-Medium.ttf'),
-    "Quicksand-Regular": require('../assets/fonts/Quicksand-Regular.ttf'),
-    "Quicksand-SemiBold": require('../assets/fonts/Quicksand-SemiBold.ttf'),
-    "Quicksand-Light": require('../assets/fonts/Quicksand-Light.ttf'),
+// Initialize Sentry with error alerting
+if (!__DEV__) {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    enableInExpoDevelopment: false,
+    debug: false,
+    tracesSampleRate: 1.0,
+    beforeSend(event, hint) {
+      // Only send critical errors in production
+      if (event.level === 'error' || event.level === 'fatal') {
+        return event;
+      }
+      return null;
+    },
   });
+}
 
+export default function RootLayout() {
   useEffect(() => {
-    if(error) throw error;
-    if(fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded, error]);
+    // Initialize offline support
+    const initializeServices = async () => {
+      try {
+        const { initializeOfflineSupport } = await import('@/lib/offlineService');
+        const unsubscribeOffline = initializeOfflineSupport();
 
-  useEffect(() => {
-    fetchAuthenticatedUser()
+        // Setup notification listeners
+        const { setupNotificationListeners, requestNotificationPermissions } = await import('@/lib/notificationService');
+        setupNotificationListeners();
+        
+        // Request notification permissions (non-blocking)
+        requestNotificationPermissions().catch(err => {
+          if (__DEV__) {
+            console.log('Notification permission request failed:', err);
+          }
+        });
+
+        return () => {
+          if (unsubscribeOffline) {
+            unsubscribeOffline();
+          }
+        };
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error initializing services:', error);
+        }
+        // In production, log to error tracking service
+        if (!__DEV__ && typeof Sentry !== 'undefined') {
+          Sentry.captureException(error);
+        }
+      }
+    };
+
+    initializeServices();
   }, []);
-
-  // Configure notifications (only for mobile platforms)
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-        }),
-      });
-    }
-  }, []);
-
-  if(!fontsLoaded || isLoading) return null;
 
   return (
-    <ThemeProvider>
-      <AppInitializationProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AppInitializationProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StripeProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          >
+            <Stack.Screen name="index" options={{ animation: 'none' }} />
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="reset-password" />
+          <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="restaurant-detail" />
+            <Stack.Screen name="item-detail" />
+            <Stack.Screen name="special-offer-details" />
+            <Stack.Screen name="promotion-detail" />
+            <Stack.Screen name="address-management" />
+            <Stack.Screen name="payment-methods" />
+            <Stack.Screen name="checkout" />
+            <Stack.Screen name="order-confirmation" />
+            <Stack.Screen name="order-tracking" />
+            <Stack.Screen name="restaurant-discovery" />
+            <Stack.Screen name="settings" />
+          </Stack>
+        </StripeProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
-});
-
-Sentry.showFeedbackWidget();
+}

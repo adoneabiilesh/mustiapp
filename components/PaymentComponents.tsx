@@ -31,8 +31,8 @@ export const PaymentMethodCard: React.FC<{
     switch (paymentMethod.type) {
       case 'card':
         return {
-          backgroundColor: '#1E3A8A',
-          gradient: ['#1E3A8A', '#3B82F6'],
+          backgroundColor: '#991B1B',
+          gradient: ['#991B1B', '#E53E3E'],
         };
       case 'digital_wallet':
         return {

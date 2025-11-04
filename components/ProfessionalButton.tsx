@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
-import { useTheme } from '@/lib/theme';
-import { ComponentStyles } from '@/lib/theme';
+import { useTheme } from '../lib/theme';
+import { ComponentStyles } from '../lib/theme';
 
 interface ProfessionalButtonProps {
   title: string;

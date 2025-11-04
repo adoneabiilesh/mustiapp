@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { images } from '@/constants';
 import { addPaymentMethod } from '../lib/userPreferences';
 import useAuthStore from '../store/auth.store';
-import cn from 'clsx';
+import { cn } from '@/lib/utils';
 
 const PaymentMethod = () => {
   const { user } = useAuthStore();
@@ -232,7 +232,7 @@ const PaymentMethod = () => {
             >
               <View className={cn(
                 'w-5 h-5 rounded border-2 mr-3 items-center justify-center',
-                saveCard ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                saveCard ? 'border-red-500 bg-red-500' : 'border-gray-300'
               )}>
                 {saveCard && (
                   <Text className="text-white text-xs">✓</Text>
@@ -260,8 +260,8 @@ const PaymentMethod = () => {
           </View>
 
           {/* Payment Methods Info */}
-          <View className="bg-blue-50 p-4 rounded-lg mb-6">
-            <Text className="text-blue-800 text-sm">
+          <View className="bg-red-50 p-4 rounded-lg mb-6">
+            <Text className="text-red-800 text-sm">
               💳 We accept Visa, Mastercard, American Express, and other major credit cards.
               Your payment information is secure and encrypted.
             </Text>
@@ -292,7 +292,7 @@ const PaymentMethod = () => {
           disabled={loading}
           className={cn(
             'py-4 rounded-xl items-center',
-            loading ? 'bg-gray-400' : 'bg-blue-500'
+            loading ? 'bg-gray-400' : 'bg-red-500'
           )}
         >
           <Text className="text-white text-lg font-bold">

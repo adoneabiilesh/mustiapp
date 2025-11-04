@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TextStyle } from 'react-native';
-import { useTheme } from '@/lib/theme';
+import { useTheme } from '../lib/theme';
 
 interface ProfessionalTextProps {
   children: React.ReactNode;

@@ -1,15 +1,19 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   Image,
   Dimensions,
   Platform,
   AccessibilityInfo,
+  Animated,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Icons } from '@/lib/icons';
 import { getImageSource } from '@/lib/imageUtils';
+import { MicroAnimations } from '@/lib/animations';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -47,14 +51,18 @@ const ProductCard = memo<ProductCardProps>(({
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [justAddedToCart, setJustAddedToCart] = useState(false);
+  
+  // Animations
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const favoriteScaleAnim = useRef(new Animated.Value(1)).current;
+  const cartButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const [imageError, setImageError] = useState(false);
 
   // Handle card press with animation
   const handleCardPress = useCallback(() => {
-    if (Platform.OS === 'ios') {
-      // Add haptic feedback for iOS
-      const { HapticFeedback } = require('expo-haptics');
-      HapticFeedback.impactAsync(HapticFeedback.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     onPress(id);
   }, [id, onPress]);
@@ -63,9 +71,11 @@ const ProductCard = memo<ProductCardProps>(({
   const handleFavoriteToggle = useCallback((event: any) => {
     event.stopPropagation(); // Prevent card press
     
-    if (Platform.OS === 'ios') {
-      const { HapticFeedback } = require('expo-haptics');
-      HapticFeedback.impactAsync(HapticFeedback.ImpactFeedbackStyle.Medium);
+    // Animate the favorite button
+    MicroAnimations.successBounce(favoriteScaleAnim).start();
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     
     onFavoriteToggle(id, !isFavorite);
@@ -75,10 +85,16 @@ const ProductCard = memo<ProductCardProps>(({
   const handleAddToCart = useCallback((event: any) => {
     event.stopPropagation(); // Prevent card press
     
-    if (Platform.OS === 'ios') {
-      const { HapticFeedback } = require('expo-haptics');
-      HapticFeedback.impactAsync(HapticFeedback.ImpactFeedbackStyle.Medium);
+    // Animate the cart button
+    MicroAnimations.successBounce(cartButtonScaleAnim).start();
+    
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    
+    // Show success state briefly
+    setJustAddedToCart(true);
+    setTimeout(() => setJustAddedToCart(false), 1500);
     
     if (hasCustomizations) {
       onPress(id); // Navigate to detail for customizations
@@ -108,29 +124,36 @@ const ProductCard = memo<ProductCardProps>(({
   const favoriteAccessibilityLabel = isFavorite ? `Remove ${name} from favorites` : `Add ${name} to favorites`;
   const addButtonAccessibilityLabel = `Add ${name} to cart`;
 
+  const handlePressIn = useCallback(() => {
+    setIsPressed(true);
+    MicroAnimations.buttonPress(scaleAnim).start();
+  }, []);
+  
+  const handlePressOut = useCallback(() => {
+    setIsPressed(false);
+    MicroAnimations.buttonRelease(scaleAnim).start();
+  }, []);
+
   return (
-    <TouchableOpacity
-      testID={testID}
-      accessibilityLabel={cardAccessibilityLabel}
-      accessibilityHint="Double tap to view details"
-      accessibilityRole="button"
-      onPress={handleCardPress}
-      onPressIn={() => setIsPressed(true)}
-      onPressOut={() => setIsPressed(false)}
-      style={{
-        width: CARD_WIDTH,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4, // Android shadow
-        transform: [{ scale: isPressed ? 0.96 : 1 }],
-      }}
-      activeOpacity={0.9}
-    >
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        testID={testID}
+        onPress={handleCardPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={({ pressed }) => ({
+          width: CARD_WIDTH,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 20,
+          marginBottom: 16,
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
+          elevation: 4, // Android shadow
+          opacity: pressed ? 0.9 : 1,
+        })}
+        accessibilityLabel={cardAccessibilityLabel}
+        accessibilityHint="Double tap to view details"
+        accessibilityRole="button"
+      >
       {/* Image Section */}
       <View style={{ position: 'relative' }}>
         <Image
@@ -164,33 +187,36 @@ const ProductCard = memo<ProductCardProps>(({
         )}
         
         {/* Favorite Button Overlay */}
-        <TouchableOpacity
-          accessibilityLabel={favoriteAccessibilityLabel}
-          accessibilityRole="button"
-          onPress={handleFavoriteToggle}
+        <Animated.View
           style={{
             position: 'absolute',
             top: 12,
             right: 12,
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
+            transform: [{ scale: favoriteScaleAnim }],
           }}
-          activeOpacity={0.7}
         >
-          <Icons.Heart 
-            size={16} 
-            color={isFavorite ? '#FF4B5C' : '#8E8E93'} 
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel={favoriteAccessibilityLabel}
+            accessibilityRole="button"
+            onPress={handleFavoriteToggle}
+            activeOpacity={0.7}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+              elevation: 2,
+            }}
+          >
+            <Icons.Heart 
+              size={16} 
+              color={isFavorite ? '#FF4B5C' : '#8E8E93'} 
+            />
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       {/* Content Section */}
@@ -245,30 +271,34 @@ const ProductCard = memo<ProductCardProps>(({
           </Text>
 
           {/* Add Button */}
-          <TouchableOpacity
-            accessibilityLabel={addButtonAccessibilityLabel}
-            accessibilityRole="button"
-            onPress={handleAddToCart}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: '#CDFF00',
-              justifyContent: 'center',
-              alignItems: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 2,
-            }}
-            activeOpacity={0.8}
-          >
-            <Icons.Plus size={16} color="#000000" />
-          </TouchableOpacity>
+          <Animated.View style={{ transform: [{ scale: cartButtonScaleAnim }] }}>
+            <TouchableOpacity
+              accessibilityLabel={addButtonAccessibilityLabel}
+              accessibilityRole="button"
+              onPress={handleAddToCart}
+              activeOpacity={0.8}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: justAddedToCart ? '#10B981' : '#CDFF00',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+                elevation: 2,
+              }}
+            >
+              {justAddedToCart ? (
+                <Icons.Check size={16} color="#FFFFFF" />
+              ) : (
+                <Icons.Plus size={16} color="#000000" />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
+    </Animated.View>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for React.memo
@@ -286,3 +316,4 @@ const ProductCard = memo<ProductCardProps>(({
 ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;
+

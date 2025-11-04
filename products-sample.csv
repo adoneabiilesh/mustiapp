@@ -1,0 +1,18 @@
+name,description,price,image_url,restaurant_id,category,categories,is_available,is_featured,preparation_time,calories,weight,allergens,dietary_info
+Classic Burger,"Juicy beef patty with lettuce, tomato, pickles, and our special sauce on a toasted bun",12.99,https://images.unsplash.com/photo-1568901346375-23c9450c58cd,your-restaurant-id,Burgers,"Burgers,Main Course",true,false,15,650,250g,"Gluten,Dairy",Contains Meat
+Margherita Pizza,"Classic pizza with tomato sauce, fresh mozzarella, basil, and olive oil",14.99,https://images.unsplash.com/photo-1574071318508-1cdbab80d002,your-restaurant-id,Pizza,"Pizza,Main Course",true,true,20,800,350g,"Gluten,Dairy",Vegetarian
+Caesar Salad,"Crisp romaine lettuce with parmesan cheese, croutons, and Caesar dressing",9.99,https://images.unsplash.com/photo-1546793665-c74683f339c1,your-restaurant-id,Salads,"Salads,Starters",true,false,10,320,200g,"Gluten,Dairy,Eggs",Vegetarian
+Spaghetti Carbonara,"Classic Italian pasta with eggs, cheese, bacon, and black pepper",13.99,https://images.unsplash.com/photo-1612874742237-6526221588e3,your-restaurant-id,Pasta,"Pasta,Main Course",true,false,18,720,300g,"Gluten,Dairy,Eggs",Contains Meat
+Grilled Salmon,"Atlantic salmon fillet with lemon butter sauce and seasonal vegetables",24.99,https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2,your-restaurant-id,Seafood,"Seafood,Main Course,Healthy",true,true,25,450,300g,Fish,"Gluten-Free,High Protein"
+French Fries,"Crispy golden fries with sea salt",4.99,https://images.unsplash.com/photo-1576107232684-1279f390859f,your-restaurant-id,Sides,"Sides,Snacks",true,false,8,350,150g,None,Vegan
+Chicken Wings,"Spicy buffalo wings with ranch dipping sauce",11.99,https://images.unsplash.com/photo-1527477396000-e27163b481c2,your-restaurant-id,Appetizers,"Appetizers,Starters",true,false,15,580,400g,"Dairy,Eggs",Contains Meat
+Vanilla Milkshake,"Thick and creamy vanilla milkshake topped with whipped cream",5.99,https://images.unsplash.com/photo-1572490122747-3968b75cc699,your-restaurant-id,Drinks,"Drinks,Desserts",true,false,5,420,350ml,Dairy,Vegetarian
+Chocolate Lava Cake,"Warm chocolate cake with a molten center, served with vanilla ice cream",8.99,https://images.unsplash.com/photo-1606313564200-e75d5e30476c,your-restaurant-id,Desserts,"Desserts,Sweets",true,true,12,550,180g,"Gluten,Dairy,Eggs",Vegetarian
+Greek Salad,"Fresh tomatoes, cucumbers, olives, feta cheese, and red onions",10.99,https://images.unsplash.com/photo-1540189549336-e6e99c3679fe,your-restaurant-id,Salads,"Salads,Healthy,Mediterranean",true,false,8,280,250g,Dairy,"Vegetarian,Gluten-Free"
+BBQ Ribs,"Tender pork ribs glazed with our signature BBQ sauce",19.99,https://images.unsplash.com/photo-1529193591184-b1d58069ecdd,your-restaurant-id,BBQ,"BBQ,Main Course",true,true,35,920,500g,None,Contains Meat
+Vegetable Stir Fry,"Mixed vegetables stir-fried with garlic and ginger in teriyaki sauce",11.99,https://images.unsplash.com/photo-1512621776951-a57141f2eefd,your-restaurant-id,Asian,"Asian,Vegetarian,Healthy",true,false,12,320,300g,Soy,"Vegan,Dairy-Free"
+Tacos Al Pastor,"Three tacos with marinated pork, pineapple, cilantro, and onions",13.99,https://images.unsplash.com/photo-1565299585323-38d6b0865b47,your-restaurant-id,Mexican,"Mexican,Main Course",true,false,15,580,350g,"Gluten,Dairy",Contains Meat
+Iced Coffee,"Cold brew coffee over ice with milk",4.99,https://images.unsplash.com/photo-1517487881594-2787fef5ebf7,your-restaurant-id,Drinks,"Drinks,Coffee,Cold",true,false,3,120,500ml,Dairy,Vegetarian
+Garlic Bread,"Toasted bread with garlic butter and herbs",5.99,https://images.unsplash.com/photo-1573140401552-388e00f6f528,your-restaurant-id,Sides,"Sides,Appetizers",true,false,7,280,150g,"Gluten,Dairy",Vegetarian
+
+

@@ -1,7 +1,7 @@
 import {View, Text, TouchableOpacity, ActivityIndicator} from 'react-native'
 import React from 'react'
 import {CustomButtonProps} from "@/type";
-import cn from "clsx";
+import { cn } from "@/lib/utils";
 
 const CustomButton = ({
     onPress,
@@ -12,19 +12,30 @@ const CustomButton = ({
     isLoading = false,
     disabled = false
 }: CustomButtonProps) => {
+    const handlePress = () => {
+        console.log('🔘 Button pressed:', title);
+        if (onPress && !disabled && !isLoading) {
+            onPress();
+        }
+    };
+
     return (
         <TouchableOpacity 
             className={cn(
                 'custom-btn', 
-                disabled && 'opacity-50',
+                (disabled || isLoading) && 'opacity-50',
                 style
             )} 
-            onPress={onPress}
+            onPress={handlePress}
             disabled={disabled || isLoading}
+            activeOpacity={0.7}
+            style={{ 
+                ...(disabled || isLoading ? { opacity: 0.5 } : {}),
+            }}
         >
             {leftIcon}
 
-            <View className="flex-center flex-row">
+            <View className="flex-center flex-row gap-2">
                 {isLoading ? (
                     <ActivityIndicator size="small" color="white" />
                 ): (
@@ -36,4 +47,5 @@ const CustomButton = ({
         </TouchableOpacity>
     )
 }
+
 export default CustomButton

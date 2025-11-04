@@ -1,0 +1,92 @@
+name,description,price,image_url,restaurant_id,category,categories,is_available,is_featured,preparation_time,calories
+Vodka Lemon,Classic vodka cocktail with fresh lemon,8.00,https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,180
+Gin Lemon,Refreshing gin with lemon,8.00,https://images.unsplash.com/photo-1551538827-9c037cb4f32a,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,170
+Gin Tonic,Classic gin and tonic,8.00,https://images.unsplash.com/photo-1551538827-9c037cb4f32a,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,true,5,150
+Jägerbom,Jägermeister bomb cocktail,8.00,https://images.unsplash.com/photo-1470337458703-46ad1756a187,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,200
+Cuba Libre,Rum with cola and lime,8.00,https://images.unsplash.com/photo-1514361892635-6b07e31e75f9,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,190
+Negroni,Classic Italian cocktail with gin,10.00,https://images.unsplash.com/photo-1568580285732-8f1e5a11b48a,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,true,5,200
+Americano,Campari and vermouth cocktail,8.00,https://images.unsplash.com/photo-1551024601-bec78aea704b,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,150
+Boulevardier,Whiskey-based Negroni variation,10.00,https://images.unsplash.com/photo-1536935338788-846bb9981813,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,220
+Aperol Spritz,Italian aperitif with prosecco,8.00,https://images.unsplash.com/photo-1595981267035-7b04ca84a82d,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,true,5,130
+Black Russian,Vodka and coffee liqueur,10.00,https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,250
+Sex on the Beach,Fruity vodka cocktail,9.00,https://images.unsplash.com/photo-1541702784954-16d4df73c397,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,200
+Loyola,Vodka with strawberry and lemon soda,8.00,https://images.unsplash.com/photo-1587223075055-82e9a937ddff,ccbf921d-5d78-484d-8690-c3a33159f609,Cocktails,"Cocktails,Drinks",true,false,5,180
+Amaro del Capo,Italian herbal liqueur digestif,2.00,https://images.unsplash.com/photo-1569529465841-dfecdab7503b,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,100
+Rum Zacapa,Premium aged rum from Guatemala,4.00,https://images.unsplash.com/photo-1527281400018-4828cdc5d80f,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,true,2,70
+Talisker Whisky,Scottish single malt whisky,4.00,https://images.unsplash.com/photo-1527281400018-4828cdc5d80f,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,70
+Sambuca,Italian anise-flavored liqueur,2.00,https://images.unsplash.com/photo-1609951651556-5334e2706168,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,100
+Tequila Sale Limone,Tequila with salt and lemon,2.50,https://images.unsplash.com/photo-1567696153798-705c6fc48494,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,70
+Limoncello,Italian lemon liqueur,2.00,https://images.unsplash.com/photo-1606787366850-de6330128bfc,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,90
+Jägermeister,German herbal liqueur,2.00,https://images.unsplash.com/photo-1546171753-97d7676e5836,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,80
+Gin Mare,Mediterranean gin,4.00,https://images.unsplash.com/photo-1602980003889-5062a03c7363,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,true,2,70
+Gin Malfy,Italian gin with citrus,4.00,https://images.unsplash.com/photo-1602980003889-5062a03c7363,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,70
+Vodka Grey Goose,Premium French vodka,4.00,https://images.unsplash.com/photo-1601924994987-69e26d50dc26,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,true,2,70
+Vodka Belvedere,Polish luxury vodka,4.00,https://images.unsplash.com/photo-1601924994987-69e26d50dc26,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,70
+Fernet Branca Menta,Minty herbal liqueur,2.00,https://images.unsplash.com/photo-1569529465841-dfecdab7503b,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,80
+Grappa Barricata,Barrel-aged Italian grappa,3.00,https://images.unsplash.com/photo-1569529465841-dfecdab7503b,ccbf921d-5d78-484d-8690-c3a33159f609,Spirits,"Spirits,Drinks",true,false,2,70
+Coca-Cola 33cl,Classic Coca-Cola,2.50,https://images.unsplash.com/photo-1554866585-cd94860890b7,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,140
+Coca-Cola Zero 33cl,Sugar-free Coca-Cola,2.50,https://images.unsplash.com/photo-1629203851122-3726ecdf080e,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,0
+Fanta 33cl,Orange soda,2.50,https://images.unsplash.com/photo-1624517452488-04869289c4ca,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,130
+Sprite 33cl,Lemon-lime soda,2.50,https://images.unsplash.com/photo-1625772452859-1c03d5bf1137,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,140
+Red Bull 250ml,Energy drink,3.50,https://images.unsplash.com/photo-1622543925917-763c34c1a86e,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,110
+Te Pesca 50cl,Peach iced tea,3.00,https://images.unsplash.com/photo-1556679343-c7306c1976bc,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,90
+Te Limone 50cl,Lemon iced tea,3.00,https://images.unsplash.com/photo-1556679343-c7306c1976bc,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,90
+Schweppes Tonica 20cl,Tonic water,3.00,https://images.unsplash.com/photo-1527960471264-932f39eb5846,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,80
+Schweppes Limone 20cl,Lemon tonic water,3.00,https://images.unsplash.com/photo-1527960471264-932f39eb5846,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,80
+Acqua Naturale 50cl,Still water,1.50,https://images.unsplash.com/photo-1548839140-29a749e1cf4d,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,0
+Acqua Frizzante 50cl,Sparkling water,1.50,https://images.unsplash.com/photo-1523362628745-0c100150b504,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,0
+Succo di Frutta 200ml,Fruit juice,3.00,https://images.unsplash.com/photo-1600271886742-f049cd451bba,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,120
+Peroni 66cl,Italian lager beer,4.50,https://images.unsplash.com/photo-1608270586620-248524c67de9,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,true,2,210
+Heineken 66cl,Dutch premium lager,5.00,https://images.unsplash.com/photo-1618885472179-5e474019f2a9,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,220
+Peroni 33cl,Italian lager beer (small),2.50,https://images.unsplash.com/photo-1608270586620-248524c67de9,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,105
+Heineken 33cl,Dutch premium lager (small),3.00,https://images.unsplash.com/photo-1618885472179-5e474019f2a9,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,110
+Menabrea 33cl,Italian blonde lager,3.50,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,120
+Beer Senza Glutine 33cl,Gluten-free beer,3.50,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,110
+Tennent's 33cl,Scottish lager,3.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,130
+Ceres 33cl,Danish beer,4.50,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,140
+Messina 50cl,Sicilian beer,4.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,165
+Ichnusa Non Filtrata 50cl,Unfiltered Sardinian beer,4.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,170
+Moretti Non Filtrata 50cl,Unfiltered Italian lager,4.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,170
+Corona 35.5cl,Mexican beer with lime,3.50,https://images.unsplash.com/photo-1571613316887-6f8d5cbf7ef7,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,true,2,135
+Campari Soda,Campari cocktail aperitif,3.00,https://images.unsplash.com/photo-1595981234155-7f45d94be4b8,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,100
+Crodino,Non-alcoholic Italian aperitif,3.00,https://images.unsplash.com/photo-1587223075055-82e9a937ddff,ccbf921d-5d78-484d-8690-c3a33159f609,Soft Drinks,"Soft Drinks,Drinks",true,false,1,80
+Weissbier Paulaner 50cl,German wheat beer,4.50,https://images.unsplash.com/photo-1605963011319-8b2e580fd9a1,ccbf921d-5d78-484d-8690-c3a33159f609,Beer,"Beer,Drinks",true,false,2,180
+Kozel Scura Grande 50cl,Czech dark lager (large),6.50,https://images.unsplash.com/photo-1612528443702-f6741f70a049,ccbf921d-5d78-484d-8690-c3a33159f609,Draft Beer,"Draft Beer,Beer,Drinks",true,true,3,200
+Kozel Scura Piccola 35cl,Czech dark lager (small),4.50,https://images.unsplash.com/photo-1612528443702-f6741f70a049,ccbf921d-5d78-484d-8690-c3a33159f609,Draft Beer,"Draft Beer,Beer,Drinks",true,false,3,140
+Kozel Chiara Grande 50cl,Czech light lager (large),6.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Draft Beer,"Draft Beer,Beer,Drinks",true,false,3,190
+Kozel Chiara Piccola 35cl,Czech light lager (small),4.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Draft Beer,"Draft Beer,Beer,Drinks",true,false,3,130
+Peroni Cruda Grande 50cl,Unfiltered Peroni draft (large),6.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Draft Beer,"Draft Beer,Beer,Drinks",true,false,3,195
+Peroni Cruda Piccola 35cl,Unfiltered Peroni draft (small),4.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Draft Beer,"Draft Beer,Beer,Drinks",true,false,3,135
+Hamburger,"Beef burger (240g) with lettuce, ketchup, and mayo",6.50,https://images.unsplash.com/photo-1568901346375-23c9450c58cd,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,true,15,550
+Cheese Burger,"Beef burger (240g) with cheddar, lettuce, ketchup, and mayo",7.00,https://images.unsplash.com/photo-1550547660-d9450f859349,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,true,15,620
+Cheese Bacon Burger,"Beef burger (240g) with cheddar, bacon, lettuce, ketchup, and mayo",9.00,https://images.unsplash.com/photo-1553979459-d2229ba7433b,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,true,15,720
+Onion Burger,"Beef burger (240g) with cheddar, onions, lettuce, ketchup, and mayo",9.00,https://images.unsplash.com/photo-1571091718767-18b5b1457add,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,false,15,680
+Chilli Burger,"Spicy beef burger (240g) with cheddar, jalapeños, lettuce, ketchup, and mayo",9.00,https://images.unsplash.com/photo-1565299624946-b28f40a0ae38,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,false,15,690
+Egg Bacon Burger,"Beef burger (240g) with cheddar, bacon, egg, lettuce, ketchup, and mayo",10.00,https://images.unsplash.com/photo-1619740455993-557c4c88fc81,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,true,15,780
+Crispy Chicken Burger,"Crispy chicken breast (150g) with lettuce and mayo",7.00,https://images.unsplash.com/photo-1562059392-096320bccc7e,ccbf921d-5d78-484d-8690-c3a33159f609,Burgers,"Burgers,Main Course",true,false,15,520
+Hotdog,"Chicken sausage with lettuce, ketchup, and mayo",5.50,https://images.unsplash.com/photo-1612392062422-ef19b42f74df,ccbf921d-5d78-484d-8690-c3a33159f609,Hotdogs,"Hotdogs,Snacks",true,false,10,380
+Cheese Hotdog,"Chicken sausage with cheddar, lettuce, ketchup, and mayo",6.00,https://images.unsplash.com/photo-1619740455993-557c4c88fc81,ccbf921d-5d78-484d-8690-c3a33159f609,Hotdogs,"Hotdogs,Snacks",true,false,10,420
+Cheese Bacon Hotdog,"Chicken sausage with cheddar, bacon, lettuce, ketchup, and mayo",7.00,https://images.unsplash.com/photo-1619740455993-557c4c88fc81,ccbf921d-5d78-484d-8690-c3a33159f609,Hotdogs,"Hotdogs,Snacks",true,false,10,480
+Patate Fritte,Crispy golden french fries,6.00,https://images.unsplash.com/photo-1576107232684-1279f390859f,ccbf921d-5d78-484d-8690-c3a33159f609,Fries,"Fries,Sides",true,true,8,350
+Bocconcini di Pollo 5pz,Crispy chicken bites (5 pieces),6.00,https://images.unsplash.com/photo-1562967916-1a3650565e80,ccbf921d-5d78-484d-8690-c3a33159f609,Fries,"Fries,Sides",true,false,10,420
+Anelli di Cipolla 5pz,Crispy onion rings (5 pieces),6.00,https://images.unsplash.com/photo-1639024471283-03518883512d,ccbf921d-5d78-484d-8690-c3a33159f609,Fries,"Fries,Sides",true,false,8,320
+Samosa Verdure 3pz,Vegetable samosas (3 pieces),6.00,https://images.unsplash.com/photo-1601050690597-df0568f70950,ccbf921d-5d78-484d-8690-c3a33159f609,Fries,"Fries,Sides",true,false,10,280
+Alette di Pollo 5pz,Chicken wings (5 pieces),7.00,https://images.unsplash.com/photo-1527477396000-e27163b481c2,ccbf921d-5d78-484d-8690-c3a33159f609,Fries,"Fries,Sides",true,true,12,480
+Kebab Classico,"Piadina with chicken (150g), onions, lettuce, ketchup, and mayo",7.00,https://images.unsplash.com/photo-1599487488170-d11ec9c172f0,ccbf921d-5d78-484d-8690-c3a33159f609,Kebab,"Kebab,Main Course",true,true,12,520
+Kebab Formaggio,"Piadina with chicken (150g), cheddar, onions, lettuce, ketchup, and mayo",8.00,https://images.unsplash.com/photo-1599487488170-d11ec9c172f0,ccbf921d-5d78-484d-8690-c3a33159f609,Kebab,"Kebab,Main Course",true,false,12,580
+Kebab Bacon,"Piadina with chicken (150g), bacon, onions, lettuce, ketchup, and mayo",9.00,https://images.unsplash.com/photo-1599487488170-d11ec9c172f0,ccbf921d-5d78-484d-8690-c3a33159f609,Kebab,"Kebab,Main Course",true,false,12,620
+Kebab Piccante,"Spicy piadina with chicken (150g), onions, chili, lettuce, ketchup, and mayo",8.00,https://images.unsplash.com/photo-1599487488170-d11ec9c172f0,ccbf921d-5d78-484d-8690-c3a33159f609,Kebab,"Kebab,Main Course",true,false,12,540
+IPA Steam Brew 0.5L 4.9%,American IPA craft beer,5.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,true,2,200
+Double IPA Steam Brew 0.5L 7.8%,Strong double IPA craft beer,5.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,250
+German Red Steam Brew 0.5L 7.9%,German red ale craft beer,5.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,240
+Black Stout Steam Brew 7.5%,Rich black stout craft beer,5.00,https://images.unsplash.com/photo-1612528443702-f6741f70a049,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,230
+Wheat Pale Ale Steam Brew 5.6%,Wheat pale ale craft beer,5.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,190
+Blanche Isaac Baladin 33cl 5%,Belgian white beer by Baladin,6.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,true,2,140
+Gluten Free Igea Salento 33cl 5.3%,Gluten-free craft beer from Salento,6.50,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,130
+Agricola Chiara Leverano 33cl 5%,Light blonde craft beer from Leverano,6.50,https://images.unsplash.com/photo-1608434780996-eaede6b2cd36,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,135
+Rock and Roll APA Baladin 33cl 7.5%,American Pale Ale by Baladin,7.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,true,2,160
+Gjulia Weizen 33cl 6%,Wheat beer from Gjulia brewery,7.00,https://images.unsplash.com/photo-1605963011319-8b2e580fd9a1,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,145
+Gjulia IPA 33cl 5.8%,IPA from Gjulia brewery,7.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,150
+Gjulia Ambrata 33cl 7%,Amber ale from Gjulia brewery,7.00,https://images.unsplash.com/photo-1535958636474-b021ee887b13,ccbf921d-5d78-484d-8690-c3a33159f609,Craft Beer,"Craft Beer,Beer,Drinks",true,false,2,165
+
+

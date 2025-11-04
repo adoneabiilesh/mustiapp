@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Musti Place",
-    "slug": "musti-place",
+    "slug": "food-delivery-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,6 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#FF6B6B"
     },
+    "description": "Food delivery app - Order delicious meals from your favorite restaurants",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -19,6 +20,9 @@
       "bundleIdentifier": "com.mustiplace.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
@@ -26,7 +30,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FF6B6B"
       },
-      "package": "com.mustiplace.app"
+      "package": "com.mustiplace.app",
+      "runtimeVersion": "1.0.0"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -44,6 +49,9 @@
         "projectId": "cde5bd2d-b03a-427c-91ee-b0e021e2dc17"
       }
     },
-    "owner": "millionin20s"
+    "owner": "millionin20s",
+    "updates": {
+      "url": "https://u.expo.dev/cde5bd2d-b03a-427c-91ee-b0e021e2dc17"
+    }
   }
 }

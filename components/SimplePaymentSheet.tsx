@@ -224,10 +224,10 @@ export const SimplePaymentSheet: React.FC<SimplePaymentSheetProps> = ({
             alignItems: 'center',
             marginBottom: 8,
           }}>
-            <Icons.Security size={20} color="#3B82F6" />
-            <Text style={{ color: '#1E3A8A', fontWeight: '500', marginLeft: 8 }}>Secure Payment</Text>
+            <Icons.Security size={20} color="#E53E3E" />
+            <Text style={{ color: '#991B1B', fontWeight: '500', marginLeft: 8 }}>Secure Payment</Text>
           </View>
-          <Text style={{ color: '#1E40AF', fontSize: 14 }}>
+          <Text style={{ color: '#991B1B', fontSize: 14 }}>
             Your payment information is encrypted and secure. This is a demo payment system.
           </Text>
         </View>

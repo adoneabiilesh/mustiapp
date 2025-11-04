@@ -9,7 +9,7 @@ const MenuCard = ({ item: { $id, image_url, name, price }}: { item: MenuItem}) =
     const { addItem } = useCartStore();
 
     return (
-        <TouchableOpacity className="food-card mb-4">
+        <View className="food-card mb-4">
             <View className="food-card-image">
                 <Image 
                     source={{ uri: imageUrl || 'https://via.placeholder.com/300x200' }} 
@@ -30,7 +30,7 @@ const MenuCard = ({ item: { $id, image_url, name, price }}: { item: MenuItem}) =
             >
                 <Image source={images.plus} className="size-4" tintColor="white" />
             </TouchableOpacity>
-        </TouchableOpacity>
+        </View>
     )
 }
 export default MenuCard

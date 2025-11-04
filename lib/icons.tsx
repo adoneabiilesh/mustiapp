@@ -8,47 +8,69 @@ import {
   Check, 
   X, 
   ChevronLeft, 
-  ChevronRight,
+  ChevronRight, 
   ChevronDown,
-  Search,
-  Filter,
-  MapPin,
-  Clock,
-  Phone,
-  Mail,
-  User,
-  Settings,
+  ArrowLeft,
+  ArrowRight,
+  Search, 
+  Filter, 
+  MapPin, 
+  Clock, 
+  Phone, 
+  Mail, 
+  User, 
+  Settings, 
   LogOut,
+  Lock,
+  Eye,
+  EyeOff,
   // Food-specific icons
-  Utensils,
-  Coffee,
-  Pizza,
-  IceCream,
-  Apple,
+  Utensils, 
+  Coffee, 
+  Pizza, 
+  IceCream, 
+  Apple, 
   Carrot,
+  ChefHat, 
   // Navigation icons
-  Home,
-  Menu,
-  Bell,
+  Home, 
+  Menu, 
+  Bell, 
   // Action icons
   Edit,
+  Edit2,
   Trash,
-  Share,
+  Trash2,
+  Share, 
   // Status icons
-  CheckCircle,
-  AlertCircle,
-  Info,
+  CheckCircle, 
+  AlertCircle, 
+  Info, 
   // Payment icons
-  CreditCard,
+  CreditCard, 
   Wallet,
+  DollarSign, 
   // Delivery icons
-  Truck,
+  Truck, 
   Package,
+  Bike, 
   // Rating icons
-  ThumbsUp,
-  ThumbsDown,
+  ThumbsUp, 
+  ThumbsDown, 
   // Additional icons
   Flame,
+  Grid,
+  // Profile icons
+  Camera,
+  Image,
+  // Payment icons
+  Shield,
+  // New icons
+  Percent,
+  ShoppingBag,
+  Award,
+  MessageCircle,
+  RefreshCw,
 } from 'lucide-react-native';
 
 export const Icons = {
@@ -63,6 +85,9 @@ export const Icons = {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ArrowBack: ArrowLeft,
+  ArrowLeft,
+  ArrowRight,
   Search,
   Filter,
   MapPin,
@@ -72,6 +97,9 @@ export const Icons = {
   User,
   Settings,
   LogOut,
+  Lock,
+  Eye,
+  EyeOff,
   
   // Food & Restaurant
   Utensils,
@@ -80,6 +108,7 @@ export const Icons = {
   IceCream,
   Apple,
   Carrot,
+  ChefHat,
   
   // Navigation
   Home,
@@ -88,7 +117,9 @@ export const Icons = {
   
   // Actions
   Edit,
+  Edit2,
   Trash,
+  Trash2,
   Share,
   
   // Status
@@ -99,10 +130,12 @@ export const Icons = {
   // Payment
   CreditCard,
   Wallet,
+  DollarSign,
   
   // Delivery
   Truck,
   Package,
+  Bike,
   
   // Rating
   ThumbsUp,
@@ -110,6 +143,31 @@ export const Icons = {
   
   // Additional
   Flame,
+  Grid,
+  
+  // Profile icons
+  Camera,
+  Image,
+  
+  // Payment icons
+  Close: X,
+  Security: Shield,
+  
+  // Additional icons
+  Percent,
+  ShoppingBag,
+  Award,
+  MessageCircle,
+  Location: MapPin,
+  RefreshCw,
+  
+  // Settings icons - using only icons that we know exist
+  Tag: Percent, // Tag icon alternative
+  Globe: Home, // Globe icon alternative (using Home icon)
+  Sun: Star, // Sun icon alternative (using Star icon)
+  HelpCircle: AlertCircle, // HelpCircle alternative
+  MessageSquare: MessageCircle, // MessageSquare alternative
+  FileText: Info, // FileText alternative
 };
 
 // Icon size presets

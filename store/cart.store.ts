@@ -1,5 +1,8 @@
 import { CartCustomization, CartStore } from "@/type";
 import { create } from "zustand";
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePromotionStore } from "./promotion.store";
 
 function areCustomizationsEqual(
     a: CartCustomization[] = [],
@@ -13,98 +16,140 @@ function areCustomizationsEqual(
     return aSorted.every((item, idx) => item.id === bSorted[idx].id);
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
-    items: [],
+// Validate item has proper UUID format
+function isValidUUID(id: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+}
 
-    addItem: (item) => {
-        console.log('🛒 Cart Store: Adding item', item);
-        const customizations = item.customizations ?? [];
+export const useCartStore = create<CartStore>()(
+    persist(
+        (set, get) => ({
+            items: [],
 
-        const existing = get().items.find(
-            (i) =>
-                i.id === item.id &&
-                areCustomizationsEqual(i.customizations ?? [], customizations)
-        );
+            addItem: (item) => {
+                // Validate item ID format
+                if (!item.id || !isValidUUID(item.id)) {
+                    console.error('❌ Cannot add item with invalid ID:', item.id, '- Item:', item.name);
+                    return;
+                }
+                
+                const customizations = item.customizations ?? [];
 
-        if (existing) {
-            console.log('🛒 Cart Store: Item exists, increasing quantity');
-            set({
-                items: get().items.map((i) =>
-                    i.id === item.id &&
-                    areCustomizationsEqual(i.customizations ?? [], customizations)
-                        ? { ...i, quantity: i.quantity + 1 }
-                        : i
-                ),
-            });
-        } else {
-            console.log('🛒 Cart Store: New item, adding to cart');
-            set({
-                items: [...get().items, { 
-                    ...item, 
-                    quantity: 1, 
-                    customizations,
-                    cartId: `${item.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Unique cart ID
-                }],
-            });
-        }
-        console.log('🛒 Cart Store: Updated items', get().items);
-    },
+                const existing = get().items.find(
+                    (i) =>
+                        i.id === item.id &&
+                        areCustomizationsEqual(i.customizations ?? [], customizations)
+                );
 
-    removeItem: (id, customizations = []) => {
-        set({
-            items: get().items.filter(
-                (i) =>
-                    !(
+                if (existing) {
+                    set({
+                        items: get().items.map((i) =>
+                            i.id === item.id &&
+                            areCustomizationsEqual(i.customizations ?? [], customizations)
+                                ? { ...i, quantity: i.quantity + 1 }
+                                : i
+                        ),
+                    });
+                    console.log('Added to cart:', existing.name, '- Qty:', existing.quantity + 1);
+                } else {
+                    set({
+                        items: [...get().items, { 
+                            ...item, 
+                            quantity: 1, 
+                            customizations,
+                            cartId: `${item.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Unique cart ID
+                        }],
+                    });
+                    console.log('Added to cart:', item.name);
+                }
+            },
+
+            removeItem: (id, customizations = []) => {
+                set({
+                    items: get().items.filter(
+                        (i) =>
+                            !(
+                                i.id === id &&
+                                areCustomizationsEqual(i.customizations ?? [], customizations)
+                            )
+                    ),
+                });
+            },
+
+            increaseQty: (id, customizations = []) => {
+                set({
+                    items: get().items.map((i) =>
                         i.id === id &&
                         areCustomizationsEqual(i.customizations ?? [], customizations)
-                    )
-            ),
-        });
-    },
+                            ? { ...i, quantity: i.quantity + 1 }
+                            : i
+                    ),
+                });
+            },
 
-    increaseQty: (id, customizations = []) => {
-        set({
-            items: get().items.map((i) =>
-                i.id === id &&
-                areCustomizationsEqual(i.customizations ?? [], customizations)
-                    ? { ...i, quantity: i.quantity + 1 }
-                    : i
-            ),
-        });
-    },
+            decreaseQty: (id, customizations = []) => {
+                set({
+                    items: get()
+                        .items.map((i) =>
+                            i.id === id &&
+                            areCustomizationsEqual(i.customizations ?? [], customizations)
+                                ? { ...i, quantity: i.quantity - 1 }
+                                : i
+                        )
+                        .filter((i) => i.quantity > 0),
+                });
+            },
 
-    decreaseQty: (id, customizations = []) => {
-        set({
-            items: get()
-                .items.map((i) =>
-                    i.id === id &&
-                    areCustomizationsEqual(i.customizations ?? [], customizations)
-                        ? { ...i, quantity: i.quantity - 1 }
-                        : i
-                )
-                .filter((i) => i.quantity > 0),
-        });
-    },
+            clearCart: () => set({ items: [] }),
 
-    clearCart: () => set({ items: [] }),
+            getTotalItems: () => {
+                const total = get().items.reduce((total, item) => total + item.quantity, 0);
+                return total;
+            },
 
-    getTotalItems: () => {
-        const total = get().items.reduce((total, item) => total + item.quantity, 0);
-        console.log('🛒 Cart Store: getTotalItems =', total, 'items:', get().items.length);
-        return total;
-    },
+            getTotalPrice: () => {
+                const total = get().items.reduce((total, item) => {
+                    const base = item.price;
+                    const customPrice =
+                        item.customizations?.reduce(
+                            (s: number, c: CartCustomization) => s + c.price,
+                            0
+                        ) ?? 0;
+                    return total + item.quantity * (base + customPrice);
+                }, 0);
+                return total;
+            },
 
-    getTotalPrice: () => {
-        const total = get().items.reduce((total, item) => {
-            const base = item.price;
-            const customPrice =
-                item.customizations?.reduce(
-                    (s: number, c: CartCustomization) => s + c.price,
-                    0
-                ) ?? 0;
-            return total + item.quantity * (base + customPrice);
-        }, 0);
-        console.log('🛒 Cart Store: getTotalPrice =', total);
-        return total;
-    },
-}));
+            getSubtotal: () => {
+                return get().getTotalPrice();
+            },
+
+            getDiscountAmount: () => {
+                const subtotal = get().getSubtotal();
+                const { getTotalDiscount } = usePromotionStore.getState();
+                return getTotalDiscount(subtotal);
+            },
+
+            getFinalTotal: () => {
+                const subtotal = get().getSubtotal();
+                const discount = get().getDiscountAmount();
+                return Math.max(0, subtotal - discount);
+            },
+        }),
+        {
+            name: 'cart-storage',
+            storage: createJSONStorage(() => AsyncStorage),
+            // Migrate old invalid data
+            migrate: (persistedState: any, version: number) => {
+                if (persistedState && Array.isArray(persistedState.items)) {
+                    // Filter out items with invalid IDs
+                    persistedState.items = persistedState.items.filter((item: any) => 
+                        item.id && isValidUUID(item.id)
+                    );
+                }
+                return persistedState;
+            },
+        }
+    )
+);

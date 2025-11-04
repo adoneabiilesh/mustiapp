@@ -151,8 +151,8 @@ const AddressManager: React.FC<AddressManagerProps> = ({
             />
           </View>
 
-          <View className="bg-blue-50 p-4 rounded-xl">
-            <Text className="text-sm text-blue-800">
+          <View className="bg-red-50 p-4 rounded-xl">
+            <Text className="text-sm text-red-800">
               💡 Tip: This address will be used as your default delivery address for all orders.
             </Text>
           </View>

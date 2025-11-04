@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { images } from '@/constants';
-import cn from 'clsx';
+import { cn } from '@/lib/utils';
 
 const RateOrder = () => {
   const { orderId } = useLocalSearchParams();
@@ -30,8 +30,31 @@ const RateOrder = () => {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const { createRestaurantReview } = await import('../lib/reviewService');
+      const { supabase } = await import('../lib/supabase');
+      
+      // Get restaurant ID from order
+      const { data: order } = await supabase
+        .from('orders')
+        .select('restaurant_id')
+        .eq('id', orderId)
+        .single();
+      
+      if (!order?.restaurant_id) {
+        throw new Error('Restaurant not found');
+      }
+      
+      const avgRating = Math.round((foodRating + deliveryRating) / 2);
+      
+      await createRestaurantReview({
+        restaurant_id: order.restaurant_id,
+        order_id: orderId as string,
+        rating: avgRating,
+        food_rating: foodRating,
+        delivery_rating: deliveryRating,
+        comment: reviewText || undefined,
+        images: photos.length > 0 ? photos : undefined,
+      });
       
       Alert.alert(
         'Thank You!',
@@ -40,8 +63,8 @@ const RateOrder = () => {
           { text: 'OK', onPress: () => router.back() }
         ]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit review. Please try again.');
     } finally {
       setLoading(false);
     }

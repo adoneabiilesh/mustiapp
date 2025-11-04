@@ -2,7 +2,7 @@ import {View, Text, FlatList, TouchableOpacity, Platform} from 'react-native'
 import {Category} from "@/type";
 import {router, useLocalSearchParams} from "expo-router";
 import {useState} from "react";
-import cn from "clsx";
+import { cn } from "@/lib/utils";
 
 const Filter = ({ categories }: { categories: Category[] }) => {
     const searchParams = useLocalSearchParams();

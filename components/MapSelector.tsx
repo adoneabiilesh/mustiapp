@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Icons } from '@/lib/icons';
-import { useTheme } from '@/lib/theme';
-import { ProfessionalText, ProfessionalButton } from '@/components';
+import { useTheme } from '../lib/theme';
+import { ProfessionalText } from './ProfessionalText';
+import { ProfessionalButton } from './ProfessionalButton';
 
 const { width, height } = Dimensions.get('window');
 

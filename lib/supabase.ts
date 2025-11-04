@@ -1,10 +1,21 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { validateEnvironment } from './env-validation';
 
-// Supabase configuration
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+// Validate environment variables
+validateEnvironment();
+
+// Supabase configuration with fallbacks for development
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ CRITICAL: Supabase credentials are missing!');
+  if (!__DEV__) {
+    throw new Error('Supabase configuration is missing. The app cannot function without it.');
+  }
+}
 
 // Create Supabase client with AsyncStorage for auth persistence
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -90,6 +101,139 @@ export const signIn = async ({ email, password }: SignInParams) => {
   } catch (error: any) {
     console.error('Sign in error:', error);
     throw new Error(error.message || 'Failed to sign in');
+  }
+};
+
+/**
+ * Sign in with Google
+ */
+export const signInWithGoogle = async () => {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'mustiapp://auth/callback',
+      },
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    console.error('Google sign in error:', error);
+    throw new Error(error.message || 'Failed to sign in with Google');
+  }
+};
+
+/**
+ * Sign in with Apple
+ */
+export const signInWithApple = async () => {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: 'mustiapp://auth/callback',
+      },
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    console.error('Apple sign in error:', error);
+    throw new Error(error.message || 'Failed to sign in with Apple');
+  }
+};
+
+/**
+ * Send OTP to phone number
+ */
+export const signInWithPhone = async (phone: string) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      phone,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    console.error('Phone sign in error:', error);
+    throw new Error(error.message || 'Failed to send OTP');
+  }
+};
+
+/**
+ * Reset password - sends password reset email
+ */
+export const resetPassword = async (email: string) => {
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'mustiapp://reset-password',
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    console.error('Password reset error:', error);
+    throw new Error(error.message || 'Failed to send password reset email');
+  }
+};
+
+/**
+ * Update password with new password
+ */
+export const updatePassword = async (newPassword: string) => {
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    console.error('Update password error:', error);
+    throw new Error(error.message || 'Failed to update password');
+  }
+};
+
+/**
+ * Verify OTP code
+ */
+export const verifyOTP = async (phone: string, token: string) => {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone,
+      token,
+      type: 'sms',
+    });
+
+    if (error) throw error;
+    if (!data.user) throw new Error('Failed to verify OTP');
+
+    // Check if user profile exists, create if not
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    if (!existingUser) {
+      // Create user profile
+      await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          phone,
+          name: phone, // Use phone as initial name
+          avatar: `https://ui-avatars.com/api/?name=${phone}&background=random`,
+        });
+    }
+
+    const user = await getCurrentUser();
+    return user;
+  } catch (error: any) {
+    console.error('Verify OTP error:', error);
+    throw new Error(error.message || 'Failed to verify OTP');
   }
 };
 
