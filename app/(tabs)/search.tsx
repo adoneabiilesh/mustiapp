@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -589,10 +589,10 @@ const ToastNotification: React.FC<{
   type?: 'success' | 'error' | 'warning' | 'info';
   onHide: () => void;
 }> = ({ visible, message, type = 'success', onHide }) => {
-  const slideAnim = React.useRef(new Animated.Value(-100)).current;
-  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.spring(slideAnim, {

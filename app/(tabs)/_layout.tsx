@@ -8,17 +8,16 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/lib/design
 const TabBarIcon = ({ focused, icon }: { focused: boolean; icon: any }) => (
   <View style={{ 
     alignItems: 'center', 
-    justifyContent: 'center', 
-    minHeight: 35, 
-    paddingVertical: 2 
+    justifyContent: 'center',
+    width: 24,
+    height: 24,
   }}>
     <Image 
       source={icon} 
       tintColor={focused ? Colors.primary[500] : Colors.neutral[400]}
       style={{ 
-        width: 20, 
-        height: 20, 
-        marginBottom: 2,
+        width: 24, 
+        height: 24,
       }} 
       resizeMode="contain"
     />
@@ -36,18 +35,18 @@ export default function TabLayout() {
       headerShown: false,
       tabBarShowLabel: true,
       tabBarLabelStyle: {
-        fontSize: 9,
+        fontSize: 10,
         fontWeight: '500',
-        marginTop: 1,
-        marginBottom: 2,
+        marginTop: 0,
+        marginBottom: 0,
       },
       tabBarStyle: {
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: Colors.neutral[200],
-        height: 60,
-        paddingBottom: 4,
-        paddingTop: 4,
+        height: 65,
+        paddingBottom: 8,
+        paddingTop: 8,
         paddingHorizontal: 8,
         ...Shadows.lg,
       },
@@ -55,7 +54,7 @@ export default function TabLayout() {
       tabBarInactiveTintColor: Colors.neutral[500],
       tabBarIconStyle: {
         marginTop: 0,
-        marginBottom: 2,
+        marginBottom: 0,
       },
     }}>
       <Tabs.Screen

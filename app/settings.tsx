@@ -277,7 +277,7 @@ const SettingsScreen = () => {
         onPress={() => {
           if (item.type === 'navigation' || item.type === 'action') {
             if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }
             item.onPress?.();
           }
@@ -318,7 +318,7 @@ const SettingsScreen = () => {
             value={item.value}
             onValueChange={(value) => {
               if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
               item.onToggle?.(value);
             }}

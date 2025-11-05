@@ -39,9 +39,27 @@ export default function WelcomeScreen() {
       );
 
       if (result.type === 'success') {
-        // Mark onboarding as seen
-        await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-        router.replace('/(tabs)');
+        // Wait a bit for Supabase to process the session
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the authenticated user
+        const user = await getCurrentUser();
+        
+        if (user) {
+          // Update auth store
+          useAuthStore.getState().setUser(user);
+          useAuthStore.getState().setIsAuthenticated(true);
+          
+          // Mark onboarding as seen
+          await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+          router.replace('/(tabs)');
+        } else {
+          throw new Error('Authentication failed. Please try again.');
+        }
+      } else if (result.type === 'cancel') {
+        // User cancelled - don't show error
+        setLoading(null);
+        return;
       }
     } catch (error: any) {
       console.error('Google sign in error:', error);
@@ -76,9 +94,27 @@ export default function WelcomeScreen() {
       );
 
       if (result.type === 'success') {
-        // Mark onboarding as seen
-        await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-        router.replace('/(tabs)');
+        // Wait a bit for Supabase to process the session
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the authenticated user
+        const user = await getCurrentUser();
+        
+        if (user) {
+          // Update auth store
+          useAuthStore.getState().setUser(user);
+          useAuthStore.getState().setIsAuthenticated(true);
+          
+          // Mark onboarding as seen
+          await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+          router.replace('/(tabs)');
+        } else {
+          throw new Error('Authentication failed. Please try again.');
+        }
+      } else if (result.type === 'cancel') {
+        // User cancelled - don't show error
+        setLoading(null);
+        return;
       }
     } catch (error: any) {
       console.error('Apple sign in error:', error);

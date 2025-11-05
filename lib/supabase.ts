@@ -112,14 +112,23 @@ export const signInWithGoogle = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'mustiapp://auth/callback',
+        redirectTo: __DEV__ 
+          ? 'exp://localhost:8081/--/auth/callback'
+          : 'mustiplace://auth/callback',
       },
     });
 
-    if (error) throw error;
+    if (error) {
+      if (__DEV__) {
+        console.error('Google sign in error:', error);
+      }
+      throw error;
+    }
     return data;
   } catch (error: any) {
-    console.error('Google sign in error:', error);
+    if (__DEV__) {
+      console.error('Google sign in error:', error);
+    }
     throw new Error(error.message || 'Failed to sign in with Google');
   }
 };
@@ -132,14 +141,23 @@ export const signInWithApple = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
-        redirectTo: 'mustiapp://auth/callback',
+        redirectTo: __DEV__ 
+          ? 'exp://localhost:8081/--/auth/callback'
+          : 'mustiplace://auth/callback',
       },
     });
 
-    if (error) throw error;
+    if (error) {
+      if (__DEV__) {
+        console.error('Apple sign in error:', error);
+      }
+      throw error;
+    }
     return data;
   } catch (error: any) {
-    console.error('Apple sign in error:', error);
+    if (__DEV__) {
+      console.error('Apple sign in error:', error);
+    }
     throw new Error(error.message || 'Failed to sign in with Apple');
   }
 };

@@ -138,7 +138,7 @@ const EnhancedLoyaltyScreen = () => {
       setPointsHistory(transactions);
       
       if (__DEV__) {
-        console.log('🎯 Loaded loyalty data:', {
+      console.log('🎯 Loaded loyalty data:', {
         points: loyalty?.points,
         tier: loyalty?.tier,
         rewardsCount: rewards.length,
@@ -146,7 +146,7 @@ const EnhancedLoyaltyScreen = () => {
       }
     } catch (error) {
       if (__DEV__) {
-        console.error('Error loading loyalty data:', error);
+      console.error('Error loading loyalty data:', error);
       }
     } finally {
       setLoading(false);
@@ -233,7 +233,7 @@ const EnhancedLoyaltyScreen = () => {
     
     if (currentPoints >= reward.pointsCost) {
       if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
       
       try {
@@ -249,21 +249,21 @@ const EnhancedLoyaltyScreen = () => {
           
           // Show success
           if (__DEV__) {
-            console.log(`✅ Redeemed: ${reward.title} for ${reward.pointsCost} points!`);
+          console.log(`✅ Redeemed: ${reward.title} for ${reward.pointsCost} points!`);
           }
           
           // Show visual feedback
           if (Platform.OS !== 'web') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
         }
       } catch (error: any) {
         if (__DEV__) {
-          console.error('Error redeeming reward:', error);
-          console.log('❌ ' + error.message);
+        console.error('Error redeeming reward:', error);
+        console.log('❌ ' + error.message);
         }
         if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
       }
     }
@@ -568,7 +568,7 @@ const EnhancedLoyaltyScreen = () => {
             onPress={() => {
               setSelectedTab(tab as any);
               if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
             }}
           >

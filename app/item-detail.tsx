@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
   TextInput,
   Platform,
+  Animated,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCartStore } from '../store/cart.store';
@@ -55,7 +56,9 @@ const ItemDetail = () => {
       setLoading(true);
       const foundItem = await getMenuItemById(id as string);
       if (!foundItem) {
-        console.log('Item not found');
+        if (__DEV__) {
+          console.log('Item not found');
+        }
         return;
       }
       
@@ -63,7 +66,9 @@ const ItemDetail = () => {
       await loadAddons(foundItem);
       await loadRecommendations(foundItem);
     } catch (error) {
-      console.error('Error loading item:', error);
+      if (__DEV__) {
+        console.error('Error loading item:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -861,10 +866,10 @@ const ToastNotification: React.FC<{
   type?: 'success' | 'error' | 'warning' | 'info';
   onHide: () => void;
 }> = ({ visible, message, type = 'success', onHide }) => {
-  const slideAnim = React.useRef(new Animated.Value(-100)).current;
-  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.spring(slideAnim, {

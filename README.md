@@ -20,8 +20,8 @@ A comprehensive food delivery application built with React Native, Expo, and Sup
    ```
 
 2. **Install dependencies**
-   ```bash
-   npm install
+```bash
+npm install
    ```
 
 3. **Set up environment variables**

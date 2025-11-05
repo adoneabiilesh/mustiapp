@@ -22,7 +22,6 @@ import { useFavoritesStore } from '@/store/favorites.store';
 import ProductGrid from '@/components/ProductGrid';
 import RestaurantSlider from '@/components/RestaurantSlider';
 import FeaturedProductsSection from '@/components/FeaturedProductsSection';
-import SpecialOffersSection from '@/components/SpecialOffersSection';
 import BannerCarousel from '@/components/BannerCarousel';
 import QuickFilters from '@/components/QuickFilters';
 import TodaysSpecials from '@/components/TodaysSpecials';
@@ -30,11 +29,8 @@ import useRestaurantStore from '@/store/restaurant.store';
 import * as Haptics from 'expo-haptics';
 
 const MenuScreen = () => {
-  const [burgers, setBurgers] = useState<any[]>([]);
-  const [pizza, setPizza] = useState<any[]>([]);
-  const [wraps, setWraps] = useState<any[]>([]);
+  const [combos, setCombos] = useState<any[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-  const [specialOffers, setSpecialOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
@@ -50,11 +46,8 @@ const MenuScreen = () => {
     try {
       setLoading(true);
       await Promise.all([
-        loadBurgers(),
-        loadPizza(),
-        loadWraps(),
+        loadCombos(),
         loadFeaturedProducts(),
-        loadSpecialOffers(),
       ]);
     } catch (error) {
       if (__DEV__) {
@@ -65,130 +58,64 @@ const MenuScreen = () => {
     }
   };
 
-  const loadBurgers = async () => {
+  const loadCombos = async () => {
     try {
-      // Load burgers from all restaurants
-      const items = await getMenuItems({
-        is_available: true,
-        limit: 20,
+      // Load combos (special offers) from all restaurants
+      const offers = await getSpecialOffers({
+        // Don't filter by restaurant_id to show combos from all restaurants
+        limit: 50, // Increased limit to show more combos
       });
-      // Filter by category name containing "burger" or "burgers"
-      const burgerItems = (items || []).filter(item => {
-        const category = item.category?.toLowerCase() || '';
-        const categories = item.categories?.map((c: any) => c.name?.toLowerCase() || '') || [];
-        const name = item.name?.toLowerCase() || '';
-        return category.includes('burger') || 
-               categories.some((c: string) => c.includes('burger')) ||
-               name.includes('burger');
-      });
+      
+      // Convert special offers to a format compatible with ProductGrid
+      const comboItems = (offers || []).map(offer => ({
+        id: offer.id,
+        $id: offer.id,
+        name: offer.title,
+        description: offer.description || '',
+        price: offer.offer_price,
+        original_price: offer.original_price,
+        image_url: offer.image_url,
+        imageUrl: offer.image_url || '',
+        discount_percentage: offer.discount_percentage,
+        is_combo: true,
+        special_offer: offer,
+      }));
+      
       if (__DEV__) {
-        console.log('🍔 Loaded burgers:', burgerItems?.length || 0);
+        console.log('🍱 Loaded combos:', comboItems?.length || 0);
       }
-      setBurgers(burgerItems);
+      setCombos(comboItems);
     } catch (error) {
       if (__DEV__) {
-        console.error('❌ Error loading burgers:', error);
+        console.error('❌ Error loading combos:', error);
       }
-      setBurgers([]);
-    }
-  };
-
-  const loadPizza = async () => {
-    try {
-      // Load pizza from all restaurants
-      const items = await getMenuItems({
-        is_available: true,
-        limit: 20,
-      });
-      // Filter by category name containing "pizza"
-      const pizzaItems = (items || []).filter(item => {
-        const category = item.category?.toLowerCase() || '';
-        const categories = item.categories?.map((c: any) => c.name?.toLowerCase() || '') || [];
-        const name = item.name?.toLowerCase() || '';
-        return category.includes('pizza') || 
-               categories.some((c: string) => c.includes('pizza')) ||
-               name.includes('pizza');
-      });
-      if (__DEV__) {
-        console.log('🍕 Loaded pizza:', pizzaItems?.length || 0);
-      }
-      setPizza(pizzaItems);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('❌ Error loading pizza:', error);
-      }
-      setPizza([]);
-    }
-  };
-
-  const loadWraps = async () => {
-    try {
-      // Load wraps from all restaurants
-      const items = await getMenuItems({
-        is_available: true,
-        limit: 20,
-      });
-      // Filter by category name containing "wrap" or "wraps"
-      const wrapItems = (items || []).filter(item => {
-        const category = item.category?.toLowerCase() || '';
-        const categories = item.categories?.map((c: any) => c.name?.toLowerCase() || '') || [];
-        const name = item.name?.toLowerCase() || '';
-        return category.includes('wrap') || 
-               categories.some((c: string) => c.includes('wrap')) ||
-               name.includes('wrap');
-      });
-      if (__DEV__) {
-        console.log('🌯 Loaded wraps:', wrapItems?.length || 0);
-      }
-      setWraps(wrapItems);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('❌ Error loading wraps:', error);
-      }
-      setWraps([]);
+      setCombos([]);
     }
   };
 
   const loadFeaturedProducts = async () => {
     try {
-      // Load featured products from all restaurants if no restaurant is selected
-      // or filter by restaurant if one is selected
+      // Always load featured products from ALL restaurants (don't filter by restaurant_id)
       const products = await getFeaturedProducts({
-        restaurant_id: selectedRestaurant?.id, // undefined means show all
-        limit: 10,
+        // Don't pass restaurant_id to show products from all restaurants
+        limit: 50, // Increased limit to show more featured products
       });
       if (__DEV__) {
         console.log('⭐ Loaded featured products:', products?.length || 0);
+        console.log('🏪 Sample products:', products.slice(0, 3).map(p => ({
+          name: p.name,
+          restaurant: p.restaurant?.name || 'No restaurant',
+        })));
       }
       setFeaturedProducts(products || []);
     } catch (error) {
       if (__DEV__) {
-        console.error('Error loading featured products:', error);
+        console.error('❌ Error loading featured products:', error);
       }
       setFeaturedProducts([]);
     }
   };
 
-  const loadSpecialOffers = async () => {
-    try {
-      // Load offers from all restaurants if no restaurant is selected
-      // or filter by restaurant if one is selected
-      const offers = await getSpecialOffers({
-        restaurant_id: selectedRestaurant?.id,
-        is_featured: undefined, // Show all active offers (featured first due to ordering)
-        limit: 10,
-      });
-      if (__DEV__) {
-        console.log('🎁 Loaded special offers:', offers?.length || 0);
-      }
-      setSpecialOffers(offers || []);
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error loading special offers:', error);
-      }
-      setSpecialOffers([]);
-    }
-  };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -209,12 +136,17 @@ const MenuScreen = () => {
 
   const handleAddToCart = (productId: string, allItems: any[] = []) => {
     const { addItem } = useCartStore.getState();
-    // Search in all category arrays
-    const allProducts = [...burgers, ...pizza, ...wraps, ...featuredProducts, ...allItems];
+    // Search in all arrays
+    const allProducts = [...combos, ...featuredProducts, ...allItems];
     const product = allProducts.find(item => item.$id === productId || item.id === productId);
     if (product) {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      // If it's a combo, navigate to combo details instead of adding directly
+      if (product.is_combo) {
+        router.push(`/special-offer-details?id=${product.id}`);
+        return;
       }
       addItem({
         id: product.$id || product.id,
@@ -277,20 +209,6 @@ const MenuScreen = () => {
           />
         }
       >
-        {/* SPECIAL OFFERS SECTION */}
-        {specialOffers.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Special Offers</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            <SpecialOffersSection offers={specialOffers} />
-          </>
-        )}
-
-
         {/* Restaurant Slider */}
         <RestaurantSlider onRestaurantSelect={(restaurant) => {
           if (__DEV__) {
@@ -314,7 +232,7 @@ const MenuScreen = () => {
 
         {/* FEATURED PRODUCTS SECTION */}
         <View style={styles.sectionHeaderWithPadding}>
-          <Text style={styles.sectionTitle}>Featured Items</Text>
+          <Text style={styles.sectionTitle}>⭐ Featured Items</Text>
           {featuredProducts.length > 0 && (
             <TouchableOpacity>
               <Text style={styles.seeAll}>See all</Text>
@@ -330,73 +248,38 @@ const MenuScreen = () => {
         ) : (
           <View style={styles.emptySectionContainer}>
             <Text style={styles.emptySectionText}>No featured products available</Text>
-            <Text style={styles.emptySectionSubtext}>Mark products as featured in the admin dashboard</Text>
+            <Text style={styles.emptySectionSubtext}>Mark products as featured in the admin dashboard to see them here</Text>
           </View>
         )}
 
-        {/* BURGERS SECTION */}
+        {/* COMBOS SECTION */}
         <View style={styles.sectionHeaderWithPadding}>
-          <Text style={styles.sectionTitle}>🍔 Burgers</Text>
-          {burgers.length > 0 && (
+          <Text style={styles.sectionTitle}>🍱 Combos</Text>
+          {combos.length > 0 && (
             <TouchableOpacity>
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           )}
         </View>
-        {burgers.length > 0 ? (
+        {combos.length > 0 ? (
           <ProductGrid
-            products={burgers}
-            onProductPress={handleProductPress}
+            products={combos.map(combo => ({
+              id: combo.id,
+              name: combo.name,
+              description: combo.description,
+              price: combo.price,
+              imageUrl: combo.image_url || combo.imageUrl || '',
+              isFavorite: isFavorite(combo.id),
+              hasCustomizations: false,
+            }))}
+            onProductPress={(id) => router.push(`/special-offer-details?id=${id}`)}
             onFavoriteToggle={handleFavoriteToggle}
-            onAddToCart={(id) => handleAddToCart(id, burgers)}
+            onAddToCart={(id) => handleAddToCart(id, combos)}
           />
         ) : (
           <View style={styles.emptySectionContainer}>
-            <Text style={styles.emptySectionText}>No burgers available</Text>
-          </View>
-        )}
-
-        {/* PIZZA SECTION */}
-        <View style={styles.sectionHeaderWithPadding}>
-          <Text style={styles.sectionTitle}>🍕 Pizza</Text>
-          {pizza.length > 0 && (
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {pizza.length > 0 ? (
-          <ProductGrid
-            products={pizza}
-            onProductPress={handleProductPress}
-            onFavoriteToggle={handleFavoriteToggle}
-            onAddToCart={(id) => handleAddToCart(id, pizza)}
-          />
-        ) : (
-          <View style={styles.emptySectionContainer}>
-            <Text style={styles.emptySectionText}>No pizza available</Text>
-          </View>
-        )}
-
-        {/* WRAPS SECTION */}
-        <View style={styles.sectionHeaderWithPadding}>
-          <Text style={styles.sectionTitle}>🌯 Wraps</Text>
-          {wraps.length > 0 && (
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See all</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {wraps.length > 0 ? (
-          <ProductGrid
-            products={wraps}
-            onProductPress={handleProductPress}
-            onFavoriteToggle={handleFavoriteToggle}
-            onAddToCart={(id) => handleAddToCart(id, wraps)}
-          />
-        ) : (
-          <View style={styles.emptySectionContainer}>
-            <Text style={styles.emptySectionText}>No wraps available</Text>
+            <Text style={styles.emptySectionText}>No combos available</Text>
+            <Text style={styles.emptySectionSubtext}>Create combos in the admin dashboard to see them here</Text>
           </View>
         )}
 

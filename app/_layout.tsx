@@ -37,7 +37,7 @@ export default function RootLayout() {
         // Request notification permissions (non-blocking)
         requestNotificationPermissions().catch(err => {
           if (__DEV__) {
-            console.log('Notification permission request failed:', err);
+          console.log('Notification permission request failed:', err);
           }
         });
 
@@ -48,7 +48,7 @@ export default function RootLayout() {
         };
       } catch (error) {
         if (__DEV__) {
-          console.error('Error initializing services:', error);
+        console.error('Error initializing services:', error);
         }
         // In production, log to error tracking service
         if (!__DEV__ && typeof Sentry !== 'undefined') {

@@ -31,7 +31,37 @@
         "backgroundColor": "#FF6B6B"
       },
       "package": "com.mustiplace.app",
-      "runtimeVersion": "1.0.0"
+      "versionCode": 1,
+      "runtimeVersion": "1.0.0",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
+      "blockedPermissions": [],
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.mustiplace.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "*.mustiplace.com"
+            },
+            {
+              "scheme": "mustiplace"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",

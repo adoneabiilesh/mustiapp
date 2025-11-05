@@ -9,6 +9,7 @@ import {
   Platform,
   TextInput,
   Alert,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useCartStore } from '@/store/cart.store';
@@ -17,6 +18,7 @@ import useRestaurantStore from '@/store/restaurant.store';
 import { Colors, Spacing, BorderRadius, Shadows } from '@/lib/designSystem';
 import { Icons } from '@/lib/icons';
 import * as Haptics from 'expo-haptics';
+import { getImageSource } from '@/lib/imageUtils';
 import {
   getRestaurantSettings,
   getUserAddresses,
@@ -63,7 +65,9 @@ const CheckoutScreen = () => {
         // Load pricing settings
         const restaurantSettings = await getRestaurantSettings(selectedRestaurant.id);
         setSettings(restaurantSettings);
-        console.log('💰 Loaded pricing settings:', restaurantSettings);
+        if (__DEV__) {
+          console.log('💰 Loaded pricing settings:', restaurantSettings);
+        }
         
         // Load user addresses
         if (user) {
@@ -81,7 +85,9 @@ const CheckoutScreen = () => {
           // Load user payment methods
           const userPaymentMethods = await getUserPaymentMethods(user.id);
           setPaymentMethods(userPaymentMethods);
-          console.log('💳 Loaded payment methods:', userPaymentMethods);
+          if (__DEV__) {
+            console.log('💳 Loaded payment methods:', userPaymentMethods);
+          }
           
           // Get default payment method
           const defaultPayment = await getDefaultPaymentMethod(user.id);
@@ -115,7 +121,9 @@ const CheckoutScreen = () => {
 
   const processStripePayment = async (paymentMethodId: string) => {
     try {
-      console.log('💳 Processing Stripe payment...');
+      if (__DEV__) {
+        console.log('💳 Processing Stripe payment...');
+      }
       
       // Create payment intent on server
       const paymentIntentData = await createPaymentIntent(total);
@@ -124,7 +132,9 @@ const CheckoutScreen = () => {
         throw new Error('Failed to create payment intent');
       }
 
-      console.log('✅ Payment intent created');
+      if (__DEV__) {
+        console.log('✅ Payment intent created');
+      }
 
       // Confirm payment (handles 3D Secure if needed)
       const { paymentIntent, error } = await confirmPayment(paymentIntentData.clientSecret, {
@@ -132,18 +142,24 @@ const CheckoutScreen = () => {
       });
 
       if (error) {
-        console.error('Payment confirmation error:', error);
+        if (__DEV__) {
+          console.error('Payment confirmation error:', error);
+        }
         throw new Error(error.message);
       }
 
       if (paymentIntent?.status === 'Succeeded') {
-        console.log('✅ Payment succeeded!');
+        if (__DEV__) {
+          console.log('✅ Payment succeeded!');
+        }
         return paymentIntent.id;
       } else {
         throw new Error('Payment not completed');
       }
     } catch (error: any) {
-      console.error('❌ Stripe payment error:', error);
+      if (__DEV__) {
+        console.error('❌ Stripe payment error:', error);
+      }
       throw error;
     }
   };
@@ -160,7 +176,9 @@ const CheckoutScreen = () => {
     if (!user) return;
 
     try {
-      console.log('💳 Stripe payment method created:', stripePaymentMethodId);
+      if (__DEV__) {
+        console.log('💳 Stripe payment method created:', stripePaymentMethodId);
+      }
 
       if (saveCardInfo) {
         // Save to database
@@ -194,7 +212,9 @@ const CheckoutScreen = () => {
 
       setShowAddCard(false);
     } catch (error) {
-      console.error('Error saving payment method:', error);
+      if (__DEV__) {
+        console.error('Error saving payment method:', error);
+      }
       Alert.alert('Error', 'Failed to save payment method');
     }
   };
@@ -283,11 +303,17 @@ const CheckoutScreen = () => {
       // Process payment for card payments (not cash)
       if (selectedPayment.type === 'card' && selectedPayment.stripe_payment_method_id) {
         try {
-          console.log('💳 Processing card payment...');
+          if (__DEV__) {
+            console.log('💳 Processing card payment...');
+          }
           paymentIntentId = await processStripePayment(selectedPayment.stripe_payment_method_id);
-          console.log('✅ Payment processed:', paymentIntentId);
+          if (__DEV__) {
+            console.log('✅ Payment processed:', paymentIntentId);
+          }
         } catch (paymentError: any) {
-          console.error('❌ Payment failed:', paymentError);
+          if (__DEV__) {
+            console.error('❌ Payment failed:', paymentError);
+          }
           Alert.alert(
             'Payment Failed',
             paymentError.message || 'Failed to process payment. Please try again.',
@@ -298,13 +324,15 @@ const CheckoutScreen = () => {
       }
 
       // Create order in database
-      console.log('📦 Creating order with data:', {
-        customer_id: user.id,
-        customer_name: user.name || user.email || 'Guest',
-        restaurant_id: selectedRestaurant?.id,
-        items_count: items.length,
-        total,
-      });
+      if (__DEV__) {
+        console.log('📦 Creating order with data:', {
+          customer_id: user.id,
+          customer_name: user.name || user.email || 'Guest',
+          restaurant_id: selectedRestaurant?.id,
+          items_count: items.length,
+          total,
+        });
+      }
 
       const order = await createOrder({
         customer_id: user.id,
@@ -336,7 +364,9 @@ const CheckoutScreen = () => {
         throw new Error('Failed to create order');
       }
 
-      console.log('✅ Order created successfully:', order);
+      if (__DEV__) {
+        console.log('✅ Order created successfully:', order);
+      }
 
       // Clear cart
       clearCart();
@@ -345,7 +375,9 @@ const CheckoutScreen = () => {
       router.replace(`/order-confirmation?orderId=${order.id}`);
 
     } catch (error) {
-      console.error('❌ Error placing order:', error);
+      if (__DEV__) {
+        console.error('❌ Error placing order:', error);
+      }
       Alert.alert(
         'Order Failed',
         'Failed to place order. Please try again.',
@@ -392,6 +424,57 @@ const CheckoutScreen = () => {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Cart Items */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Order Items</Text>
+            <Text style={styles.itemsCount}>{items.length} {items.length === 1 ? 'item' : 'items'}</Text>
+          </View>
+          <View style={styles.itemsCard}>
+            {items.map((item) => (
+              <View key={item.id} style={styles.orderItem}>
+                <View style={styles.orderItemImageContainer}>
+                  <Image
+                    source={getImageSource(item.image_url, item.name)}
+                    style={styles.orderItemImage}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.orderItemInfo}>
+                  <Text style={styles.orderItemName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  {item.customizations && item.customizations.length > 0 && (
+                    <Text style={styles.orderItemCustomizations} numberOfLines={2}>
+                      {item.customizations.map((c: any) => c.name).join(', ')}
+                    </Text>
+                  )}
+                  <View style={styles.orderItemPriceRow}>
+                    <Text style={styles.orderItemQuantity}>Qty: {item.quantity}</Text>
+                    <Text style={styles.orderItemPrice}>
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Add More Items Button */}
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push('/(tabs)');
+            }}
+            style={styles.addMoreButton}
+          >
+            <Icons.Plus size={20} color={Colors.primary[500]} />
+            <Text style={styles.addMoreText}>Add more items</Text>
+          </TouchableOpacity>
+        </View>
 
           {/* Delivery Address */}
         <View style={styles.section}>
@@ -1163,6 +1246,85 @@ const styles = StyleSheet.create({
   },
   addCardButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary[500],
+    marginLeft: Spacing.xs,
+  },
+  itemsCount: {
+    fontSize: 14,
+    color: Colors.neutral[600],
+    fontWeight: '500',
+  },
+  itemsCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: Spacing.lg,
+    borderRadius: 12,
+    padding: Spacing.md,
+    ...Shadows.sm,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[100],
+  },
+  orderItemImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: Spacing.md,
+    backgroundColor: Colors.neutral[100],
+  },
+  orderItemImage: {
+    width: '100%',
+    height: '100%',
+  },
+  orderItemInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  orderItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.neutral[900],
+    marginBottom: 4,
+  },
+  orderItemCustomizations: {
+    fontSize: 12,
+    color: Colors.neutral[600],
+    marginBottom: 6,
+  },
+  orderItemPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orderItemQuantity: {
+    fontSize: 13,
+    color: Colors.neutral[600],
+  },
+  orderItemPrice: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.neutral[900],
+  },
+  addMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary[50],
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.primary[300],
+    borderStyle: 'dashed',
+  },
+  addMoreText: {
+    fontSize: 15,
     fontWeight: '600',
     color: Colors.primary[500],
     marginLeft: Spacing.xs,

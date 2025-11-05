@@ -11,7 +11,12 @@ interface Product {
   description?: string;
   price: number;
   image_url?: string;
+  restaurant_id?: string;
   restaurant?: {
+    id: string;
+    name: string;
+  };
+  restaurants?: {
     id: string;
     name: string;
   };
@@ -114,12 +119,12 @@ const FeaturedProductsSection: React.FC<FeaturedProductsSectionProps> = ({
                 </Text>
               )}
 
-              {/* Restaurant Name */}
-              {product.restaurant && (
+              {/* Restaurant Name - Always show if available */}
+              {(product.restaurant?.name || product.restaurants?.name || product.restaurant_id) && (
                 <View style={styles.restaurantTag}>
                   <Icons.MapPin size={12} color={Colors.neutral[600]} />
                   <Text style={styles.restaurantName} numberOfLines={1}>
-                    {product.restaurant.name}
+                    {product.restaurant?.name || product.restaurants?.name || 'Available'}
                   </Text>
                 </View>
               )}

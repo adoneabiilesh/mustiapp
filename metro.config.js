@@ -36,15 +36,35 @@ config.resolver.extraNodeModules = {
   }, {}),
 };
 
-// Custom resolver to handle Supabase ESM imports for web builds
+// Custom resolver to handle Supabase ESM imports and Node.js built-ins
 const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // For web builds, replace @supabase/node-fetch with browser-compatible polyfill FIRST
+  // Block Node.js built-in modules that don't exist in React Native FIRST
+  // These modules are typically polyfilled or not needed
+  const nodeBuiltins = ['stream', 'http', 'https', 'url', 'util', 'buffer', 'crypto', 'path', 'fs', 'os', 'net', 'tls', 'zlib', 'events', 'querystring'];
+  if (nodeBuiltins.includes(moduleName)) {
+    // Return an empty module stub for Node.js built-ins
+    // Most React Native code doesn't need these, and if they do, they should use polyfills
+    return {
+      type: 'empty',
+    };
+  }
+  
+  // Replace @supabase/node-fetch with platform-appropriate polyfill
   // This must happen before other Supabase package resolution
-  if (platform === 'web' && moduleName === '@supabase/node-fetch') {
-    const fetchWrapperPath = path.resolve(__dirname, 'lib', 'web-fetch-polyfill.js');
-    if (fs.existsSync(fetchWrapperPath)) {
-      return { type: 'sourceFile', filePath: fetchWrapperPath };
+  // @supabase/node-fetch uses Node.js built-ins (stream, http, url) which don't exist in React Native
+  if (moduleName === '@supabase/node-fetch') {
+    if (platform === 'web') {
+      const fetchWrapperPath = path.resolve(__dirname, 'lib', 'web-fetch-polyfill.js');
+      if (fs.existsSync(fetchWrapperPath)) {
+        return { type: 'sourceFile', filePath: fetchWrapperPath };
+      }
+    } else {
+      // For native platforms (ios, android), use React Native fetch polyfill
+      const nativeFetchPath = path.resolve(__dirname, 'lib', 'native-fetch-polyfill.js');
+      if (fs.existsSync(nativeFetchPath)) {
+        return { type: 'sourceFile', filePath: nativeFetchPath };
+      }
     }
   }
   

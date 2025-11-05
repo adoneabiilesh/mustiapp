@@ -38,4 +38,16 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Admin dashboard (separate Next.js app)
+admin-dashboard/
+
+# Test files
+__tests__/
+
+# Scripts (not needed for mobile build)
+scripts/
+
+# Supabase functions (Deno files)
+supabase/functions/
+
 app-example

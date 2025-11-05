@@ -1908,6 +1908,8 @@ export const getFeaturedProducts = async (filters?: {
       .eq('is_available', true)
       .order('created_at', { ascending: false });
 
+    // Only filter by restaurant_id if explicitly provided
+    // This allows showing featured products from all restaurants when no restaurant is selected
     if (filters?.restaurant_id) {
       query = query.eq('restaurant_id', filters.restaurant_id);
     }
@@ -1918,15 +1920,32 @@ export const getFeaturedProducts = async (filters?: {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      if (__DEV__) {
+        console.error('Error fetching featured products:', error);
+      }
+      throw error;
+    }
 
-    return (data || []).map(item => ({
+    const products = (data || []).map(item => ({
       ...item,
       $id: item.id,
-      restaurant: item.restaurants,
+      restaurant: item.restaurants ? {
+        id: item.restaurants.id,
+        name: item.restaurants.name,
+      } : null,
     }));
+
+    if (__DEV__) {
+      console.log('✅ Loaded featured products:', products.length);
+      console.log('🏪 Products with restaurants:', products.filter(p => p.restaurant).length);
+    }
+
+    return products;
   } catch (error) {
-    console.error('Error fetching featured products:', error);
+    if (__DEV__) {
+      console.error('Error fetching featured products:', error);
+    }
     return [];
   }
 };

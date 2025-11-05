@@ -23,8 +23,18 @@
       }
     },
     "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
+        "credentialsSource": "remote"
+      },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "production"
       }
     },
     "expo-go": {

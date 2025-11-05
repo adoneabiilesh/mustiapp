@@ -136,7 +136,7 @@ const Profile = () => {
           <Text style={styles.sectionTitle}>Preferences</Text>
           
           <View style={styles.menuCard}>
-            <TouchableOpacity 
+              <TouchableOpacity 
               onPress={() => handleMenuPress('/notifications')}
               style={styles.menuItem}
             >
@@ -158,13 +158,13 @@ const Profile = () => {
             >
               <View style={styles.menuIconContainer}>
                 <Icons.Award size={22} color='#FF9F66' />
-              </View>
+          </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuLabel}>Loyalty Program</Text>
                 <Text style={styles.menuDescription}>Points & rewards</Text>
               </View>
               <Icons.ChevronRight size={20} color={Colors.neutral[400]} />
-            </TouchableOpacity>
+          </TouchableOpacity>
 
             <View style={styles.divider} />
 
@@ -184,13 +184,13 @@ const Profile = () => {
 
             <View style={styles.divider} />
 
-            <TouchableOpacity
-              onPress={() => handleMenuPress('/settings')}
+          <TouchableOpacity
+            onPress={() => handleMenuPress('/settings')}
               style={styles.menuItem}
             >
               <View style={styles.menuIconContainer}>
                 <Icons.Settings size={22} color='#FF9F66' />
-              </View>
+                </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuLabel}>Settings</Text>
                 <Text style={styles.menuDescription}>App preferences</Text>
@@ -198,53 +198,53 @@ const Profile = () => {
               <Icons.ChevronRight size={20} color={Colors.neutral[400]} />
             </TouchableOpacity>
           </View>
-        </View>
+            </View>
 
         {/* Support Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
 
           <View style={styles.menuCard}>
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => handleMenuPress('/help')}
               style={styles.menuItem}
             >
               <View style={styles.menuIconContainer}>
                 <Icons.AlertCircle size={22} color='#FF9F66' />
-              </View>
+                </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuLabel}>Help Center</Text>
                 <Text style={styles.menuDescription}>FAQ & support</Text>
               </View>
               <Icons.ChevronRight size={20} color={Colors.neutral[400]} />
-            </TouchableOpacity>
+          </TouchableOpacity>
 
             <View style={styles.divider} />
 
-            <TouchableOpacity
+          <TouchableOpacity
               onPress={() => handleMenuPress('/about')}
               style={styles.menuItem}
             >
               <View style={styles.menuIconContainer}>
                 <Icons.Info size={22} color='#FF9F66' />
-              </View>
+                </View>
               <View style={styles.menuContent}>
                 <Text style={styles.menuLabel}>About</Text>
                 <Text style={styles.menuDescription}>App info & version</Text>
               </View>
               <Icons.ChevronRight size={20} color={Colors.neutral[400]} />
-            </TouchableOpacity>
+          </TouchableOpacity>
           </View>
-        </View>
+            </View>
 
         {/* Logout Button */}
-        <TouchableOpacity
-          onPress={handleLogout}
+          <TouchableOpacity
+            onPress={handleLogout}
           style={styles.logoutButton}
         >
           <Icons.LogOut size={20} color='#F44336' />
           <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
+              </TouchableOpacity>
 
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />

@@ -11,13 +11,20 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { router, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { signIn, resetPassword } from '@/lib/supabase';
+import { signIn, resetPassword, signInWithGoogle, signInWithApple } from '@/lib/supabase';
 import useAuthStore from '@/store/auth.store';
 import { Colors, Spacing, BorderRadius, Shadows } from '@/lib/designSystem';
 import { Icons } from '@/lib/icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { getCurrentUser } from '@/lib/supabase';
+
+// Initialize WebBrowser for OAuth
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignIn() {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -28,6 +35,115 @@ export default function SignIn() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
+
+  const handleGoogleSignIn = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    
+    setOauthLoading('google');
+    setError('');
+    
+    try {
+      const { url } = await signInWithGoogle();
+      
+      if (!url) {
+        throw new Error('No auth URL returned');
+      }
+
+      // Open the OAuth URL in a browser
+      const result = await WebBrowser.openAuthSessionAsync(
+        url,
+        Linking.createURL('/(tabs)')
+      );
+
+      if (result.type === 'success') {
+        // Wait a bit for Supabase to process the session
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the authenticated user
+        const user = await getCurrentUser();
+        
+        if (user) {
+          // Update auth store
+          useAuthStore.getState().setUser(user);
+          useAuthStore.getState().setIsAuthenticated(true);
+          
+          // Mark onboarding as seen
+          await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+          router.replace('/(tabs)');
+        } else {
+          throw new Error('Authentication failed. Please try again.');
+        }
+      } else if (result.type === 'cancel') {
+        // User cancelled - don't show error
+        setOauthLoading(null);
+        return;
+      }
+    } catch (error: any) {
+      if (__DEV__) {
+        console.error('Google sign in error:', error);
+      }
+      setError(error.message || 'Failed to sign in with Google. Please check Supabase OAuth configuration.');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    
+    setOauthLoading('apple');
+    setError('');
+    
+    try {
+      const { url } = await signInWithApple();
+      
+      if (!url) {
+        throw new Error('No auth URL returned');
+      }
+
+      // Open the OAuth URL in a browser
+      const result = await WebBrowser.openAuthSessionAsync(
+        url,
+        Linking.createURL('/(tabs)')
+      );
+
+      if (result.type === 'success') {
+        // Wait a bit for Supabase to process the session
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Get the authenticated user
+        const user = await getCurrentUser();
+        
+        if (user) {
+          // Update auth store
+          useAuthStore.getState().setUser(user);
+          useAuthStore.getState().setIsAuthenticated(true);
+          
+          // Mark onboarding as seen
+          await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+          router.replace('/(tabs)');
+        } else {
+          throw new Error('Authentication failed. Please try again.');
+        }
+      } else if (result.type === 'cancel') {
+        // User cancelled - don't show error
+        setOauthLoading(null);
+        return;
+      }
+    } catch (error: any) {
+      if (__DEV__) {
+        console.error('Apple sign in error:', error);
+      }
+      setError(error.message || 'Failed to sign in with Apple. Please check Supabase OAuth configuration.');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
 
   const handleSignIn = async () => {
     setError('');
@@ -177,6 +293,53 @@ export default function SignIn() {
               <View style={styles.dividerLine} />
             </View>
 
+            {/* Google Sign In */}
+            <TouchableOpacity
+              style={[styles.oauthButton, styles.googleButton]}
+              onPress={handleGoogleSignIn}
+              disabled={isSubmitting || oauthLoading !== null}
+              activeOpacity={0.8}
+            >
+              {oauthLoading === 'google' ? (
+                <ActivityIndicator color={Colors.primary[500]} />
+              ) : (
+                <>
+                  <View style={styles.oauthIconContainer}>
+                    <Text style={styles.googleIcon}>G</Text>
+                  </View>
+                  <Text style={styles.oauthButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Apple Sign In */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={[styles.oauthButton, styles.appleButton]}
+                onPress={handleAppleSignIn}
+                disabled={isSubmitting || oauthLoading !== null}
+                activeOpacity={0.8}
+              >
+                {oauthLoading === 'apple' ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <View style={styles.oauthIconContainer}>
+                      <Icons.Apple size={20} color="#FFFFFF" />
+                    </View>
+                    <Text style={[styles.oauthButtonText, styles.appleButtonText]}>Continue with Apple</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
             {/* Guest Continue */}
             <TouchableOpacity
               style={styles.guestButton}
@@ -184,7 +347,7 @@ export default function SignIn() {
                 await AsyncStorage.setItem('hasSeenOnboarding', 'true');
                 router.replace('/(tabs)');
               }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
               activeOpacity={0.8}
             >
               <Text style={styles.guestButtonText}>Continue as Guest</Text>
@@ -414,6 +577,46 @@ const styles = StyleSheet.create({
   signInButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  oauthButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background.card,
+    borderRadius: BorderRadius.md,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+    position: 'relative',
+    ...Shadows.sm,
+  },
+  googleButton: {
+    backgroundColor: '#FFFFFF',
+  },
+  appleButton: {
+    backgroundColor: '#000000',
+    borderColor: '#000000',
+  },
+  oauthIconContainer: {
+    position: 'absolute',
+    left: Spacing.md,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  googleIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  oauthButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text.primary,
+  },
+  appleButtonText: {
     color: '#FFFFFF',
   },
   divider: {

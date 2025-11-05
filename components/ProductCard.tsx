@@ -2,7 +2,6 @@ import React, { useState, useCallback, memo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Pressable,
   Image,
   Dimensions,
@@ -134,26 +133,42 @@ const ProductCard = memo<ProductCardProps>(({
     MicroAnimations.buttonRelease(scaleAnim).start();
   }, []);
 
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Pressable
-        testID={testID}
-        onPress={handleCardPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={({ pressed }) => ({
+  const CardWrapper = Platform.OS === 'web' ? View : Pressable;
+  const cardWrapperProps = Platform.OS === 'web' 
+    ? {
+        onStartShouldSetResponder: () => true,
+        onResponderRelease: handleCardPress,
+        style: {
           width: CARD_WIDTH,
           backgroundColor: '#FFFFFF',
           borderRadius: 20,
           marginBottom: 16,
           boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
-          elevation: 4, // Android shadow
+          cursor: 'pointer',
+        },
+      }
+    : {
+        testID,
+        onPress: handleCardPress,
+        onPressIn: handlePressIn,
+        onPressOut: handlePressOut,
+        style: ({ pressed }: { pressed: boolean }) => ({
+          width: CARD_WIDTH,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 20,
+          marginBottom: 16,
+          boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
+          elevation: 4,
           opacity: pressed ? 0.9 : 1,
-        })}
-        accessibilityLabel={cardAccessibilityLabel}
-        accessibilityHint="Double tap to view details"
-        accessibilityRole="button"
-      >
+        }),
+        accessibilityLabel: cardAccessibilityLabel,
+        accessibilityHint: "Double tap to view details",
+        accessibilityRole: 'button' as const,
+      };
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <CardWrapper {...cardWrapperProps as any}>
       {/* Image Section */}
       <View style={{ position: 'relative' }}>
         <Image
@@ -195,12 +210,11 @@ const ProductCard = memo<ProductCardProps>(({
             transform: [{ scale: favoriteScaleAnim }],
           }}
         >
-          <TouchableOpacity
+          <Pressable
             accessibilityLabel={favoriteAccessibilityLabel}
-            accessibilityRole="button"
+            accessibilityRole={Platform.OS === 'web' ? 'button' : 'button'}
             onPress={handleFavoriteToggle}
-            activeOpacity={0.7}
-            style={{
+            style={({ pressed }) => ({
               width: 32,
               height: 32,
               borderRadius: 16,
@@ -209,13 +223,14 @@ const ProductCard = memo<ProductCardProps>(({
               alignItems: 'center',
               boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
               elevation: 2,
-            }}
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
             <Icons.Heart 
               size={16} 
               color={isFavorite ? '#FF4B5C' : '#8E8E93'} 
             />
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       </View>
 
@@ -272,12 +287,11 @@ const ProductCard = memo<ProductCardProps>(({
 
           {/* Add Button */}
           <Animated.View style={{ transform: [{ scale: cartButtonScaleAnim }] }}>
-            <TouchableOpacity
+            <Pressable
               accessibilityLabel={addButtonAccessibilityLabel}
               accessibilityRole="button"
               onPress={handleAddToCart}
-              activeOpacity={0.8}
-              style={{
+              style={({ pressed }) => ({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
@@ -286,18 +300,19 @@ const ProductCard = memo<ProductCardProps>(({
                 alignItems: 'center',
                 boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
                 elevation: 2,
-              }}
+                opacity: pressed ? 0.8 : 1,
+              })}
             >
               {justAddedToCart ? (
                 <Icons.Check size={16} color="#FFFFFF" />
               ) : (
                 <Icons.Plus size={16} color="#000000" />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </Animated.View>
         </View>
       </View>
-    </Pressable>
+    </CardWrapper>
     </Animated.View>
   );
 }, (prevProps, nextProps) => {
