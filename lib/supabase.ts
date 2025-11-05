@@ -3,18 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { validateEnvironment } from './env-validation';
 
-// Validate environment variables
-validateEnvironment();
+// Validate environment variables (non-blocking)
+const envValidation = validateEnvironment();
 
 // Supabase configuration with fallbacks for development
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
+// In production, don't throw - create client with empty strings
+// The app will handle the error gracefully
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ CRITICAL: Supabase credentials are missing!');
-  if (!__DEV__) {
-    throw new Error('Supabase configuration is missing. The app cannot function without it.');
-  }
+  console.error('📝 Please configure EAS secrets:');
+  console.error('   eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value <your-url>');
+  console.error('   eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <your-key>');
+  console.error('   eas secret:create --scope project --name EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY --value <your-key>');
+  // Don't throw - let the app show an error screen instead
 }
 
 // Create Supabase client with AsyncStorage for auth persistence

@@ -29,13 +29,11 @@ export const validateEnvironment = () => {
   if (errors.length > 0) {
     console.error('❌ CRITICAL: Missing required environment variables:');
     errors.forEach(error => console.error(`   - ${error}`));
-    console.error('\n📝 Please create a .env file with all required variables.');
-    console.error('   See .env.example for reference.\n');
+    console.error('\n📝 Please configure environment variables in EAS secrets.');
+    console.error('   Run: eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value <your-value>\n');
     
-    // In production, this should show an error screen
-    if (!__DEV__) {
-      throw new Error('Missing required environment variables. Please contact support.');
-    }
+    // In production, don't throw - return error status instead
+    // The app will show an error screen instead of crashing
   }
 
   if (warnings.length > 0 && __DEV__) {
